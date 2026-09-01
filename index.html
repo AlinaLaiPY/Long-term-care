@@ -140,6 +140,7 @@ a{color:var(--accent-ink); text-decoration:none;}
 .tags{display:flex; flex-wrap:wrap; gap:5px; margin-top:8px; align-items:center;}
 .tag{font-size:11.5px; padding:2px 8px; border-radius:6px; background:var(--surface-2); color:var(--ink-2); border:1px solid var(--line-soft);}
 .tag.all{background:var(--accent-soft); color:var(--accent-ink); border-color:transparent; font-weight:500;}
+.tag.km{background:var(--blue-soft); color:var(--blue); border-color:transparent; font-weight:500;}
 .tag.warn{background:var(--amber-soft); color:var(--amber); border-color:transparent;}
 .tag.st{font-weight:500; border-color:transparent;}
 .st-called{background:var(--blue-soft); color:var(--blue);}
@@ -434,7 +435,7 @@ var STATUS = [
 var ST_MAP = {}; STATUS.forEach(function(s){ST_MAP[s.v]=s.t;});
 
 /* ============ 版本（要跟 Apps Script 的 APP_VERSION 對應） ============ */
-var APP_VERSION = 2;
+var APP_VERSION = 3;
 
 /* ============================================================
  * 雲端網址：直接寫在這裡，家人就不必自己輸入一長串網址。
@@ -449,7 +450,8 @@ var TOKEN_HINT = "1234";
 
 /* ============ 儲存 ============ */
 var CFGKEY = "tc-ltc-cfg-v1", KEY = "tc-ltc-transport-v1", PKEY = "tc-ltc-pending-v1",
-    EKEY = "tc-ltc-events-v1", DEVKEY = "tc-ltc-device-v1", PLACEKEY = "tc-ltc-place-v1";
+    EKEY = "tc-ltc-events-v1", DEVKEY = "tc-ltc-device-v1", PLACEKEY = "tc-ltc-place-v1",
+    COORDKEY = "tc-ltc-coords-v1";
 function readLS(k, d){ try{ var v = localStorage.getItem(k); return v ? JSON.parse(v) : d; }catch(e){ return d; } }
 function writeLS(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); return true; }catch(e){ return false; } }
 var $ = function(s){ return document.querySelector(s); };
@@ -547,6 +549,33 @@ function nearestDistrict(lat, lon){
   }
   return {d:best, km:bd};
 }
+/* ---- 單位座標：跟雲端要一次，之後存在手機裡 ---- */
+var coords = readLS(COORDKEY, {}) || {};
+function saveCoords(){ writeLS(COORDKEY, coords); }
+function missingCoords(){
+  var out = [];
+  for(var i = 0; i < DATA.length; i++) if(!coords[DATA[i].id]) out.push({id:DATA[i].id, nm:DATA[i].nm, ad:DATA[i].ad});
+  return out;
+}
+function fetchCoords(round){
+  round = round || 1;
+  if(!ready() || round > 6) return Promise.resolve();
+  var miss = missingCoords();
+  if(!miss.length) return Promise.resolve();
+  var before = miss.length;
+  return jsonp({op:"geo", list:JSON.stringify(miss.slice(0, 12))}).then(function(d){
+    (d.coords || []).forEach(function(c){ if(c.lat) coords[c.id] = [c.lat, c.lng]; });
+    saveCoords(); render();
+    if(missingCoords().length < before) return fetchCoords(round + 1);   // 有進展才繼續
+  }).catch(function(){ /* 查不到座標不影響其他功能 */ });
+}
+/** 這家單位離我的地點幾公里；沒座標就回 null */
+function kmTo(d){
+  if(!place || !place.lat || !coords[d.id]) return null;
+  return kmBetween(place.lat, place.lng, coords[d.id][0], coords[d.id][1]);
+}
+function kmText(km){ return km == null ? "" : (km < 1 ? Math.round(km * 1000) + " 公尺" : km.toFixed(1) + " 公里"); }
+
 /** 從地址文字找出行政區 */
 function districtFromAddress(str){
   var s = String(str||"").replace(/\s/g, "");
@@ -634,7 +663,7 @@ function pull(){
     Object.keys(rec).forEach(function(id){ if(!seen[id] && has(id)) pending[id] = 1; });
     sync.log = d.log || []; sync.last = Date.now();
     save(); savePending(); setSync("ok"); render();
-    return flush();
+    return flush().then(fetchCoords);
   }).catch(function(e){ if(!onApiError(e)) setSync("err", e.message); });
 }
 function pushOne(id){
@@ -778,9 +807,11 @@ $("#upgate").addEventListener("click", function(e){
 /* ============ 我的地點 ============ */
 var place = readLS(PLACEKEY, null);
 function savePlace(){ writeLS(PLACEKEY, place); }
-function setPlace(d, label){
+function setPlace(d, label, lat, lng){
   if(!d) return;
-  place = {d:d, label:label || ""};
+  var c = DISTRICT_POS[d] || [];
+  place = {d:d, label:label || "", lat:lat || c[0], lng:lng || c[1]};
+  if(place.lat) state.sort = "km";
   savePlace(); state.dist = d;
   if(sheet.classList.contains("on")) closeSheet();
   renderPlace(); renderRail(); render();
@@ -806,7 +837,7 @@ function locate(){
   navigator.geolocation.getCurrentPosition(function(pos){
     var n = nearestDistrict(pos.coords.latitude, pos.coords.longitude);
     if(n.km > 40){ toast("你目前不在臺中，請改用輸入地址"); return; }
-    setPlace(n.d, "目前位置");
+    setPlace(n.d, "目前位置", pos.coords.latitude, pos.coords.longitude);
   }, function(err){
     toast(err.code === 1 ? "定位被拒絕：設定 → Safari → 位置 → 允許" : "定位失敗，請改用輸入地址");
   }, {enableHighAccuracy:true, timeout:12000, maximumAge:60000});
@@ -834,12 +865,41 @@ function match(d){
   }
   return true;
 }
+/** 搜尋時的相關程度：名字對到最相關，其次地址，最後才是「有服務到那一區」 */
+function scoreOf(d, q){
+  q = q.toLowerCase();
+  var sc = 0;
+  if(d.nm.toLowerCase().indexOf(q) >= 0) sc += 100;
+  if(d.ad.toLowerCase().indexOf(q) >= 0) sc += 60;
+  if(String(d.id).indexOf(q) >= 0) sc += 40;
+  for(var i = 0; i < d.tel.length; i++) if(d.tel[i].n.indexOf(q) >= 0){ sc += 30; break; }
+  if(d.ar !== ALL && d.ar.indexOf(q) >= 0) sc += 10;
+  else if(d.ar === ALL) sc += 5;
+  var x = rec[d.id];
+  if(x && (x.note || "").toLowerCase().indexOf(q) >= 0) sc += 20;
+  return sc;
+}
+function byKm(a, b){
+  var ka = kmTo(a), kb = kmTo(b);
+  if(ka == null && kb == null) return a.id - b.id;
+  if(ka == null) return 1;
+  if(kb == null) return -1;
+  return ka - kb;
+}
 function render(){
   var rows = DATA.filter(match);
-  if(state.sort === "name") rows.sort(function(a,b){ return a.nm.localeCompare(b.nm, "zh-Hant"); });
+  if(state.sort === "km") rows.sort(byKm);
+  else if(state.q && state.sort === "id"){
+    rows.sort(function(a,b){ return scoreOf(b, state.q) - scoreOf(a, state.q) || byKm(a, b); });
+  }
+  else if(state.sort === "name") rows.sort(function(a,b){ return a.nm.localeCompare(b.nm, "zh-Hant"); });
   else if(state.sort === "area") rows.sort(function(a,b){ var an = a.ar===ALL?99:a.ar.length, bn = b.ar===ALL?99:b.ar.length; return bn-an || a.id-b.id; });
   else rows.sort(function(a,b){ return a.id-b.id; });
-  countEl.textContent = "共 " + rows.length + " 家" + (state.dist ? "・服務" + state.dist : "") + (state.q ? "・符合「" + state.q + "」" : "");
+  countEl.textContent = "共 " + rows.length + " 家"
+    + (state.dist ? "・服務" + state.dist : "")
+    + (state.q ? "・符合「" + state.q + "」" : "")
+    + (place && place.lat && state.sort === "km" ? "・由近到遠" : "");
+  var sb = $("#sort"); if(sb) sb.textContent = sortLabel();
   listEl.innerHTML = rows.length ? rows.map(card).join("")
     : '<div class="empty"><b>沒有符合的單位</b>換個關鍵字，或清掉區域／狀態篩選。</div>';
   renderStats();
@@ -850,6 +910,8 @@ function card(d){
     : '<span class="tag">' + d.ar.length + ' 個行政區</span><span class="tag">' + esc(d.ar.slice(0,4).join("、")) + (d.ar.length>4?"…":"") + '</span>';
   var stTag = st !== "none" ? '<span class="tag st st-'+st+'">' + ST_MAP[st] + '</span>' : "";
   var flag = d.flag ? '<span class="tag warn">⚠ 需確認</span>' : "";
+  var km = kmTo(d);
+  var kmTag = km == null ? "" : '<span class="tag km">距離約 ' + kmText(km) + '</span>';
   var who = x.by ? esc(x.by) : (x.dev ? esc(x.dev) : "");
   var note = (x.note||"").trim()
     ? '<div class="notepv">' + esc(x.note.trim()) + (who ? '<span class="by">— ' + who + '　' + relTime(x.ts) + '</span>' : "") + '</div>'
@@ -863,7 +925,7 @@ function card(d){
   + '<div class="hd"><span class="sn">' + d.id + '</span><h3 class="nm">' + esc(d.nm) + '</h3>'
   + '<span class="star' + (x.star?" on":"") + '">' + (x.star?"★":"☆") + '</span></div>'
   + '<p class="addr">' + esc(d.ad) + '</p>'
-  + '<div class="tags">' + areaTag + stTag + flag + '</div>' + note + '</button>'
+  + '<div class="tags">' + kmTag + areaTag + stTag + flag + '</div>' + note + '</button>'
   + '<div class="acts">' + callBtn
   + '<a href="https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(d.ad) + '" target="_blank" rel="noopener" data-act="map" data-id="' + d.id + '">開地圖</a>'
   + '<button data-open="' + d.id + '">寫紀錄</button></div></article>';
@@ -918,7 +980,8 @@ function openSheetFor(id){
   + (d.flag ? '<div class="field"><span class="tag warn">⚠ ' + esc(d.flag) + '</span></div>' : "")
   + '<div class="field"><div class="lbl">服務項目</div><div class="val">交通接送服務及社區式服務交通接送（DA01 及 BD03）</div></div>'
   + '<div class="field"><div class="lbl">聯絡電話</div><div class="telrow">' + tels + '</div></div>'
-  + '<div class="field"><div class="lbl">地址</div><div class="val">' + esc(d.ad) + '</div>'
+  + '<div class="field"><div class="lbl">地址</div><div class="val">' + esc(d.ad)
+  + (kmTo(d) == null ? "" : '<span class="by">離' + esc(place.label || place.d) + '約 ' + kmText(kmTo(d)) + '</span>') + '</div>'
   + '<div class="linkrow" style="margin-top:8px">'
   + '<a class="gbtn" href="https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(d.ad) + '" target="_blank" rel="noopener" data-act="map" data-id="' + d.id + '">在地圖開啟</a>'
   + '<button class="gbtn" id="copyAd">複製地址</button></div></div>'
@@ -958,7 +1021,7 @@ function actClass(a){ return a === "撥打" ? "call" : a === "搜尋" ? "search"
 function feedHtml(){
   if(!sync.log.length) return '<div class="tip">目前還沒有紀錄。家人開始使用後就會出現在這裡。</div>';
   return '<ul class="feed">' + sync.log.slice(0, 40).map(function(e){
-    return '<li><span class="fu">' + esc(e.user || e.dev || "（未署名）") + '</span>'
+    return '<li><span class="fu">' + esc(e.user || e.dev || "（舊紀錄）") + '</span>'
       + '<span class="fnm">' + esc(e.nm || "") + '</span>'
       + '<time>' + relTime(e.at) + '</time>'
       + '<span class="fa fa-' + actClass(e.act) + '">' + esc(e.act) + '</span>'
@@ -1035,9 +1098,14 @@ statsEl.addEventListener("click", function(e){
   state.filter = (state.filter === f) ? "" : f;
   renderRail(); render();
 });
+var SORTS = ["id", "km", "name", "area"];
+var SORT_TEXT = {id:"序號", km:"離我最近", name:"單位名稱", area:"服務區域多"};
+function sortLabel(){ return "排序：" + SORT_TEXT[state.sort]; }
 $("#sort").addEventListener("click", function(){
-  state.sort = state.sort === "id" ? "name" : (state.sort === "name" ? "area" : "id");
-  this.textContent = "排序：" + (state.sort === "id" ? "序號" : state.sort === "name" ? "單位名稱" : "服務區域多");
+  var i = SORTS.indexOf(state.sort);
+  state.sort = SORTS[(i + 1) % SORTS.length];
+  if(state.sort === "km" && !(place && place.lat)){ state.sort = "name"; toast("先設定「我的地點」才能依距離排序"); }
+  this.textContent = sortLabel();
   render();
 });
 listEl.addEventListener("click", function(e){
@@ -1062,7 +1130,14 @@ sheetInner.addEventListener("click", function(e){
   if(t.closest("#pParse")){
     var v = $("#pAddr").value, d = districtFromAddress(v);
     if(!d){ $("#pHint").textContent = "看不出這是臺中市的哪一區，請直接在下面點選。"; return; }
-    return setPlace(d, v.trim());
+    setPlace(d, v.trim());                      // 先用行政區中心點頂著
+    jsonp({op:"geo1", ad:v.trim()}).then(function(res){
+      if(res && res.found && place){
+        place.lat = res.lat; place.lng = res.lng; savePlace();
+        state.sort = "km"; render(); toast("已精準定位到這個地址");
+      }
+    }, function(){});
+    return;
   }
   if(t.closest("#pClear")){ clearPlace(); toast("已清除地點"); return closeSheet(); }
   var pd = t.closest("[data-pd]");
@@ -1125,7 +1200,11 @@ sheetInner.addEventListener("input", function(e){
     }, 700);
     return;
   }
-  if(id === "cfgUser"){ dev.name = e.target.value.trim(); saveDev(); setSync(sync.state); return; }
+  if(id === "cfgUser"){
+    var nv = e.target.value.trim();
+    if(!nv){ var h = e.target.parentNode.querySelector(".hint"); if(h) h.textContent = "名字不能空白 —— 紀錄一定要看得出是誰做的。"; return; }
+    dev.name = nv; saveDev(); setSync(sync.state); return;
+  }
   if(id === "pAddr"){
     var d3 = districtFromAddress(e.target.value);
     $("#pHint").textContent = d3 ? ("看起來是 " + d3 + "，按「找出行政區」確認。") : "打上長輩住的地址就好，會自動判斷行政區。";
@@ -1141,6 +1220,7 @@ setInterval(function(){ if(!document.hidden && ready() && !sync.busy) pull(); },
 
 /* ============ 啟動 ============ */
 if(place && place.d) state.dist = place.d;
+$("#sort").textContent = sortLabel();
 renderRail(); renderPlace(); render(); setSync("busy");
 if(ready()){
   try{

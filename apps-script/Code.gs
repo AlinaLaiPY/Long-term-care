@@ -27,16 +27,17 @@ var SS_ID = '';
  * 一起 +1，再「部署 → 管理部署作業 → 編輯 → 新版本」。
  * 家人手機下次連線就會被擋下來，強制更新到新版才能繼續用。
  */
-var APP_VERSION = 2;   // 目前最新的網頁版本
-var MIN_VERSION = 2;   // 低於這個版本一律強制更新
+var APP_VERSION = 3;   // 目前最新的網頁版本
+var MIN_VERSION = 3;   // 低於這個版本一律強制更新
 
 /** 使用紀錄最多留幾列，超過就從最舊的刪。 */
 var LOG_KEEP = 3000;
 
-var REC_SHEET = '紀錄', LOG_SHEET = '使用紀錄', DEV_SHEET = '裝置';
+var REC_SHEET = '紀錄', LOG_SHEET = '使用紀錄', DEV_SHEET = '裝置', GEO_SHEET = '座標';
 var REC_HEAD = ['序號', '單位名稱', '狀態', '星號', '筆記', '最後更新者', '裝置', '最後更新時間', '_ts'];
 var LOG_HEAD = ['時間', '使用者', '裝置', '動作', '內容', '序號', '單位名稱'];
 var DEV_HEAD = ['裝置代碼', '暱稱', '首次使用', '最後使用', '使用次數'];
+var GEO_HEAD = ['序號', '單位名稱', '地址', '緯度', '經度', '查詢時間'];
 
 var ST_TEXT = { none: '未聯絡', called: '已聯絡', yes: '可接送', hold: '待確認', no: '不接' };
 
@@ -60,6 +61,8 @@ function doGet(e) {
       case 'pull': out = opPull(p); break;
       case 'save': out = opSave(p); break;
       case 'log':  out = opLog(p);  break;
+      case 'geo':  out = opGeo(p);  break;
+      case 'geo1': out = opGeo1(p); break;
       default: throw new Error('不認得的動作：' + p.op);
     }
     out.minVersion = MIN_VERSION;
@@ -174,6 +177,54 @@ function opLog(p) {
   }
 }
 
+/**
+ * 把單位地址換成經緯度，存進「座標」工作表。
+ * 只有沒查過的才會真的去查，所以整份名單一輩子只查一次。
+ * 一次最多查 12 筆，避免請求逾時；網頁會自動再呼叫直到補齊。
+ */
+function opGeo(p) {
+  var list = [];
+  try { list = JSON.parse(p.list || '[]'); } catch (err) { throw new Error('座標清單格式錯誤'); }
+  var sh = geoSheet();
+  var last = sh.getLastRow();
+  var rows = last > 1 ? sh.getRange(2, 1, last - 1, GEO_HEAD.length).getValues() : [];
+  var have = {};
+  rows.forEach(function (r) {
+    if ((r[0] || r[0] === 0) && Number(r[3])) have[String(r[0])] = { lat: Number(r[3]), lng: Number(r[4]) };
+  });
+
+  var coder = Maps.newGeocoder().setLanguage('zh-TW').setRegion('tw');
+  var out = [], added = [], hitLimit = false;
+  for (var i = 0; i < list.length; i++) {
+    var it = list[i], key = String(it.id);
+    if (have[key]) { out.push({ id: Number(it.id), lat: have[key].lat, lng: have[key].lng }); continue; }
+    if (added.length >= 12) { hitLimit = true; break; }
+    var res = coder.geocode(String(it.ad || ''));
+    if (res && res.status === 'OK' && res.results && res.results.length) {
+      var loc = res.results[0].geometry.location;
+      added.push([Number(it.id), String(it.nm || ''), String(it.ad || ''), loc.lat, loc.lng, new Date()]);
+      out.push({ id: Number(it.id), lat: loc.lat, lng: loc.lng });
+      have[key] = { lat: loc.lat, lng: loc.lng };
+    }
+  }
+  if (added.length) {
+    var start = sh.getLastRow() + 1;
+    sh.getRange(start, 1, added.length, GEO_HEAD.length).setValues(added);
+    sh.getRange(start, 6, added.length, 1).setNumberFormat('yyyy/mm/dd hh:mm');
+  }
+  return { ok: true, coords: out, more: hitLimit };
+}
+
+/** 把使用者輸入的地址換成經緯度（不存檔，只回一次） */
+function opGeo1(p) {
+  var ad = String(p.ad || '').trim();
+  if (!ad) throw new Error('缺少地址');
+  var res = Maps.newGeocoder().setLanguage('zh-TW').setRegion('tw').geocode(ad);
+  if (!res || res.status !== 'OK' || !res.results || !res.results.length) return { ok: true, found: false };
+  var loc = res.results[0].geometry.location;
+  return { ok: true, found: true, lat: loc.lat, lng: loc.lng, formatted: res.results[0].formatted_address };
+}
+
 function readLog(limit) {
   var sh = logSheet(), last = sh.getLastRow();
   if (last < 2) return [];
@@ -259,13 +310,14 @@ function recSheet() {
 }
 function logSheet() { return sheetWithHead(LOG_SHEET, LOG_HEAD); }
 function devSheet() { return sheetWithHead(DEV_SHEET, DEV_HEAD); }
+function geoSheet() { return sheetWithHead(GEO_SHEET, GEO_HEAD); }
 
 /** 按上方「執行」選這個，確認有沒有接到試算表 */
 function 測試設定() {
   var s = ss();
-  recSheet(); logSheet(); devSheet();
+  recSheet(); logSheet(); devSheet(); geoSheet();
   Logger.log('已接上試算表：' + s.getName());
-  Logger.log('資料表就緒：' + REC_SHEET + '、' + LOG_SHEET + '、' + DEV_SHEET);
+  Logger.log('資料表就緒：' + REC_SHEET + '、' + LOG_SHEET + '、' + DEV_SHEET + '、' + GEO_SHEET);
   Logger.log('目前版本設定：APP_VERSION=' + APP_VERSION + '，MIN_VERSION=' + MIN_VERSION);
   return s.getName();
 }
