@@ -271,7 +271,10 @@ textarea{
 .viewtabs{display:inline-flex; gap:2px; background:var(--surface-2); border:1px solid var(--line); border-radius:999px; padding:2px;}
 .viewtabs button{padding:4px 14px; border-radius:999px; font-size:12.5px; color:var(--ink-2);}
 .viewtabs button[aria-pressed="true"]{background:var(--accent); color:var(--on-accent); font-weight:700;}
-.mapwrap{position:relative; border:1px solid var(--line); border-radius:14px; overflow:hidden; box-shadow:var(--shadow);}
+.mapwrap{
+  position:relative; z-index:0;          /* 關鍵：建立堆疊環境，否則 Leaflet 的圖層會蓋住明細視窗 */
+  border:1px solid var(--line); border-radius:14px; overflow:hidden; box-shadow:var(--shadow);
+}
 #map{height:min(64dvh, 520px);}
 .mapzoom{position:absolute; right:10px; bottom:34px; z-index:800; display:flex; flex-direction:column; gap:4px;}
 .mapzoom button{
@@ -441,6 +444,7 @@ textarea{
       <span><i style="background:var(--ink-3)"></i>未聯絡</span>
       <span><i style="background:#7c4dff;box-shadow:0 0 0 3px rgba(124,77,255,.25)"></i>我的地點</span>
     </div>
+    <div class="hint" style="margin-top:6px">點任一個圓點，就會跳出那家的電話、地址和紀錄。</div>
   </div>
   <div class="foot">
     資料來源：114–116年長期照顧服務特約單位一覽表（臺中市全市）· 交通接送服務及社區式服務交通接送 DA01／BD03。<br>
@@ -1068,7 +1072,7 @@ function drawMap(){
     plotted++;
     var st = (rec[d.id] || {}).st || "none";
     L.circleMarker([c[0], c[1]], {
-      radius: 8, color:"#fff", weight:2, opacity:1,
+      radius: 10, color:"#fff", weight:2.5, opacity:1, bubblingMouseEvents:false,
       fillColor: ST_COLOR[st] || ST_COLOR.none, fillOpacity:.95
     }).addTo(markerLayer).on("click", function(){ openSheetFor(d.id); });
     pts.push([c[0], c[1]]);
