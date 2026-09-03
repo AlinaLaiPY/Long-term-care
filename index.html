@@ -522,15 +522,20 @@ var ST_MAP = {}; STATUS.forEach(function(s){ST_MAP[s.v]=s.t;});
 var APP_VERSION = 3;
 
 /* ============================================================
- * 雲端網址：直接寫在這裡，家人就不必自己輸入一長串網址。
- * 換試算表或重新部署後網址變了，改這一行即可。
+ * 雲端網址與密語「刻意」不寫在這裡。
+ *
+ * 這份程式碼是公開的，任何人都看得到。若把 Apps Script 網址和
+ * 通關密語寫進來，等於把鑰匙掛在門上。
+ *
+ * 家人一律用管理者傳出去的「邀請連結」開啟，設定值只存在那條
+ * 連結和各自的手機裡；管理者第一次設定走進場畫面的「我是管理者」。
+ *
+ * 除非你願意讓任何人都能讀寫你的試算表，否則不要在這裡填東西。
  * ==========================================================*/
-var DEFAULT_API = "https://script.google.com/macros/s/AKfycbxQqsFjIl-kLk94UnVRvtT5cePu0r6jrUrPIbJQvJH9NnzLRvLxNxUS_-mV6m34A0HFkw/exec";
+var DEFAULT_API = "";
 
-/* 密語提示：直接顯示在輸入格下面，點一下就自動填。
- * 改了上面 Apps Script 的 TOKEN，記得這裡也要一起改。
- * 不想給提示就設成空字串 ""。 */
-var TOKEN_HINT = "1234";
+/* 密語提示：同理，公開頁面不放提示。留空即可。 */
+var TOKEN_HINT = "";
 
 /* ============ 儲存 ============ */
 var CFGKEY = "tc-ltc-cfg-v1", KEY = "tc-ltc-transport-v1", PKEY = "tc-ltc-pending-v1",
@@ -824,16 +829,32 @@ function renderBanner(){
 /* ============ 進場設定 ============ */
 var gateAdv = false;
 function showGate(msg){
-  var needTok = !cfg.token;
-  var needApi = !cfg.api || gateAdv;
-  $("#gateBox").innerHTML = ''
+  var hasApi = !!cfg.api, needTok = !cfg.token;
+  var box = $("#gateBox");
+
+  /* 沒有任何設定 = 一般人直接開網址進來的。不給輸入框，請他跟家人要連結。 */
+  if(!hasApi && !gateAdv){
+    box.innerHTML = ''
+    + '<div class="eyebrow">台中長照接送速查</div>'
+    + '<h1>請用家人給你的邀請連結開啟</h1>'
+    + '<p class="lead">這是私人的家庭照顧紀錄系統，要靠邀請連結才能使用。'
+    + '跟家裡負責的人要一次連結（通常會用 LINE 傳給你），點開就能直接用。</p>'
+    + '<div class="copy" style="margin-top:26px">© 2026 <b>AlinaLai</b> 版權所有　All rights reserved.</div>'
+    + '<div class="gmsg" style="margin-top:14px">'
+    + '<button id="gAdv" style="font-size:12.5px;color:var(--ink-3);text-decoration:underline">我是管理者，手動設定</button></div>';
+    $("#gate").hidden = false;
+    document.body.style.overflow = "hidden";
+    return;
+  }
+
+  box.innerHTML = ''
   + '<div class="eyebrow">台中長照接送速查</div>'
   + '<h1>' + (needTok ? "請輸入通關密語" : "你是誰？") + '</h1>'
   + '<p class="lead">' + (needTok
-      ? "這是全家共用的長照接送名單。輸入家人給你的通關密語，再打上你的名字，就可以開始用了。"
+      ? "輸入家人給你的通關密語，再打上你的名字，就可以開始用了。"
       : "打上你的名字或稱呼。之後每一筆紀錄都會標上是誰做的，家人才知道電話是誰打的、筆記是誰寫的。") + '</p>'
-  + (needApi ? ''
-    + '<div class="gfield"><div class="lbl">雲端網址（進階）</div>'
+  + (gateAdv || !hasApi ? ''
+    + '<div class="gfield"><div class="lbl">APPS SCRIPT 網址（管理者用）</div>'
     + '<input class="gbig" id="gApi" value="' + esc(cfg.api) + '" placeholder="https://script.google.com/macros/s/.../exec" autocomplete="off" spellcheck="false" inputmode="url"></div>' : "")
   + (needTok ? ''
     + '<div class="gfield"><div class="lbl">通關密語</div>'
@@ -846,7 +867,7 @@ function showGate(msg){
   + '<div class="gmsg" id="gMsg">' + (msg || "") + '</div>'
   + '<div class="copy" style="margin-top:26px">© 2026 <b>AlinaLai</b> 版權所有　All rights reserved.</div>'
   + '<div class="gmsg" style="margin-top:14px"><span class="devchip">這台裝置 ' + dev.id + '</span>'
-  + (needApi ? "" : ' <button id="gAdv" style="font-size:12px;color:var(--ink-3);text-decoration:underline;margin-left:8px">進階設定</button>') + '</div>';
+  + (gateAdv ? "" : ' <button id="gAdv" style="font-size:12px;color:var(--ink-3);text-decoration:underline;margin-left:8px">進階設定</button>') + '</div>';
   $("#gate").hidden = false;
   document.body.style.overflow = "hidden";
 }
@@ -858,7 +879,7 @@ $("#gate").addEventListener("click", function(e){
     var m = $("#gMsg"); m.className = "gmsg good"; m.textContent = "密語填好了，打上你的名字再按「開始使用」。";
     return;
   }
-  if(e.target.closest("#gAdv")){ gateAdv = true; showGate("需要換試算表時才改這裡。"); return; }
+  if(e.target.closest("#gAdv")){ gateAdv = true; showGate("貼上 Apps Script 的 /exec 網址與通關密語。設定完請用「複製邀請連結」把設定傳給家人。"); return; }
   var go = e.target.closest("#gGo"); if(!go) return;
   var api = $("#gApi") ? $("#gApi").value.trim() : cfg.api;
   var tk  = $("#gToken") ? $("#gToken").value.trim() : cfg.token;
@@ -1190,7 +1211,8 @@ function openPanel(){
   + '<div class="hint">裝置代碼 <b>' + dev.id + '</b>　—— 每一筆紀錄都會帶著這組代碼，試算表的「裝置」分頁看得到哪幾台在用。代碼固定不會變，換了暱稱也還是同一台。</div></div>'
   + '<div class="sec"><h3 class="sectitle">家人動態</h3>' + feedHtml() + '</div>'
   + '<div class="sec"><h3 class="sectitle">邀請家人</h3>'
-  + '<div class="tip">傳這條連結給家人，他們打開只要填自己的名字就能用。</div>'
+  + '<div class="tip">傳這條連結給家人，他們打開只要填自己的名字就能用。<br>'
+  + '<b>這條連結等於鑰匙</b> —— 網址和密語都在裡面，只在家人群組傳，不要貼到公開的地方。</div>'
   + '<div class="linkrow" style="margin-top:10px"><button class="gbtn" id="copyInvite">複製邀請連結</button>'
   + '<button class="gbtn" id="reload">重新載入</button></div></div>'
   + '<div class="sec"><h3 class="sectitle">版本與版權</h3>'
@@ -1333,9 +1355,7 @@ sheetInner.addEventListener("click", function(e){
   }
   if(t.closest("#copyInvite")){
     var base = location.origin + location.pathname;
-    var link = (cfg.api === DEFAULT_API)
-      ? base + "?t=" + encodeURIComponent(cfg.token)
-      : base + "?api=" + encodeURIComponent(cfg.api) + "&t=" + encodeURIComponent(cfg.token);
+    var link = base + "?api=" + encodeURIComponent(cfg.api) + "&t=" + encodeURIComponent(cfg.token);
     return copyText(link, "已複製邀請連結，貼給家人即可");
   }
   if(t.closest("#reload")){ location.replace(location.pathname + "?v=" + Date.now()); return; }
