@@ -16,6 +16,7 @@
   本系統之程式碼、介面設計與資料整理僅供 AlinaLai 及其授權之家人使用。
   未經書面同意，不得重製、散布、修改或作商業使用。
 -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js" defer></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@700&family=IBM+Plex+Mono:wght@500;600&display=swap">
 <style>
 :root{
@@ -60,6 +61,7 @@
   --sheet-shadow:0 -8px 40px rgba(0,0,0,.6);
 }
 *{box-sizing:border-box;}
+[hidden]{display:none !important;}   /* .list 的 display:flex 會蓋掉 hidden，必須提高權重 */
 html{-webkit-text-size-adjust:100%;}
 body{
   margin:0; background:var(--ground); color:var(--ink);
@@ -240,6 +242,53 @@ textarea{
 
 .copy{display:inline-block; margin-top:4px; color:var(--ink-3); font-size:11.5px; letter-spacing:.02em;}
 .copy b{color:var(--ink-2); font-weight:700;}
+/* ---------- 地圖 ---------- */
+.leaflet-pane,.leaflet-tile,.leaflet-tile-container,.leaflet-pane>svg,.leaflet-pane>canvas,.leaflet-layer{
+  position:absolute; left:0; top:0;
+}
+.leaflet-container{
+  overflow:hidden; background:var(--surface-2); position:relative;
+  -webkit-tap-highlight-color:transparent; font:inherit;
+}
+/* 手指在地圖上要能拖曳、縮放，而不是捲動整頁 */
+.leaflet-touch .leaflet-container{touch-action:pan-x pan-y;}
+.leaflet-container.leaflet-touch-drag{touch-action:pinch-zoom;}
+.leaflet-container.leaflet-touch-drag.leaflet-touch-zoom{touch-action:none;}
+.leaflet-dragging .leaflet-container,.leaflet-dragging .leaflet-interactive{cursor:grabbing;}
+.leaflet-grab{cursor:grab;}
+.leaflet-container img{max-width:none !important; padding:0;}
+.leaflet-tile{filter:inherit; visibility:hidden; user-select:none; -webkit-user-drag:none;}
+.leaflet-tile-loaded{visibility:inherit;}
+.leaflet-zoom-animated{transform-origin:0 0;}
+.leaflet-pane{z-index:400;}
+.leaflet-tile-pane{z-index:200;}
+.leaflet-overlay-pane{z-index:400;}
+.leaflet-marker-pane{z-index:600;}
+.leaflet-interactive{cursor:pointer;}
+:root[data-theme="dark"] .leaflet-tile-pane{filter:brightness(.78) saturate(.85) contrast(1.05);}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .leaflet-tile-pane{filter:brightness(.78) saturate(.85) contrast(1.05);}}
+
+.viewtabs{display:inline-flex; gap:2px; background:var(--surface-2); border:1px solid var(--line); border-radius:999px; padding:2px;}
+.viewtabs button{padding:4px 14px; border-radius:999px; font-size:12.5px; color:var(--ink-2);}
+.viewtabs button[aria-pressed="true"]{background:var(--accent); color:var(--on-accent); font-weight:700;}
+.mapwrap{position:relative; border:1px solid var(--line); border-radius:14px; overflow:hidden; box-shadow:var(--shadow);}
+#map{height:min(64dvh, 520px);}
+.mapzoom{position:absolute; right:10px; bottom:34px; z-index:800; display:flex; flex-direction:column; gap:4px;}
+.mapzoom button{
+  width:34px; height:34px; border-radius:9px; background:var(--surface); border:1px solid var(--line);
+  font-size:18px; line-height:1; color:var(--ink); box-shadow:var(--shadow);
+}
+.mapattr{
+  position:absolute; left:0; right:0; bottom:0; z-index:800; padding:3px 8px; font-size:10px;
+  color:var(--ink-3); background:color-mix(in srgb, var(--surface) 82%, transparent); text-align:right;
+}
+.maptip{
+  position:absolute; inset:0; z-index:790; display:flex; align-items:center; justify-content:center;
+  padding:24px; text-align:center; font-size:13px; color:var(--ink-2); line-height:1.8;
+}
+.maplegend{display:flex; flex-wrap:wrap; gap:10px; margin-top:10px; font-size:11.5px; color:var(--ink-2);}
+.maplegend span{display:inline-flex; align-items:center; gap:5px;}
+.maplegend i{width:10px; height:10px; border-radius:50%; display:inline-block;}
 .foot{margin-top:22px; padding-top:14px; border-top:1px solid var(--line-soft); font-size:11.5px; color:var(--ink-3); line-height:1.8;}
 
 
@@ -370,9 +419,29 @@ textarea{
   <div class="stats" id="stats"></div>
   <div class="resultline">
     <span id="count"></span>
+    <span class="viewtabs" id="viewtabs">
+      <button data-view="list" aria-pressed="true">清單</button>
+      <button data-view="map" aria-pressed="false">地圖</button>
+    </span>
     <button class="sortbtn" id="sort">排序：序號</button>
   </div>
   <div class="list" id="list"></div>
+  <div id="mapview" hidden>
+    <div class="mapwrap">
+      <div id="map"></div>
+      <div class="mapzoom"><button id="zin" aria-label="放大">＋</button><button id="zout" aria-label="縮小">－</button></div>
+      <div class="mapattr">圖資 © OpenStreetMap 貢獻者</div>
+      <div class="maptip" id="maptip" hidden></div>
+    </div>
+    <div class="maplegend">
+      <span><i style="background:var(--accent)"></i>可接送</span>
+      <span><i style="background:var(--blue)"></i>已聯絡</span>
+      <span><i style="background:var(--amber)"></i>待確認</span>
+      <span><i style="background:var(--red)"></i>不接</span>
+      <span><i style="background:var(--ink-3)"></i>未聯絡</span>
+      <span><i style="background:#7c4dff;box-shadow:0 0 0 3px rgba(124,77,255,.25)"></i>我的地點</span>
+    </div>
+  </div>
   <div class="foot">
     資料來源：114–116年長期照顧服務特約單位一覽表（臺中市全市）· 交通接送服務及社區式服務交通接送 DA01／BD03。<br>
     <span id="footmode"></span><br>
@@ -912,6 +981,7 @@ function render(){
     + (state.q ? "・符合「" + state.q + "」" : "")
     + (place && place.lat && state.sort === "km" ? "・由近到遠" : "");
   var sb = $("#sort"); if(sb) sb.textContent = sortLabel();
+  if(mapReady && !$("#mapview").hidden) drawMap();
   listEl.innerHTML = rows.length ? rows.map(card).join("")
     : '<div class="empty"><b>沒有符合的單位</b>換個關鍵字，或清掉區域／狀態篩選。</div>';
   renderStats();
@@ -968,6 +1038,66 @@ function renderRail(){
   chips.push('<button class="chip" data-f2="star" aria-pressed="' + (state.filter==="star") + '">★ 已標記</button>');
   chips.push('<button class="chip" data-f2="note" aria-pressed="' + (state.filter==="note") + '">有筆記</button>');
   railEl.innerHTML = chips.join("");
+}
+
+/* ============ 地圖 ============ */
+var map = null, markerLayer = null, meMarker = null, mapReady = false;
+var ST_COLOR = {none:"#7B8F8C", called:"#2A5B86", yes:"#166F5F", hold:"#8E5E0D", no:"#95362E"};
+
+function mapTip(msg){
+  var t = $("#maptip");
+  if(!msg){ t.hidden = true; t.textContent = ""; return; }
+  t.hidden = false; t.textContent = msg;
+}
+function initMap(){
+  if(mapReady) return true;
+  if(typeof L === "undefined"){ mapTip("地圖元件還沒載入完，請檢查網路後重新整理。"); return false; }
+  map = L.map($("#map"), {zoomControl:false, attributionControl:false, preferCanvas:false})
+         .setView([24.15, 120.68], 11);
+  L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {maxZoom:18, minZoom:9}).addTo(map);
+  markerLayer = L.layerGroup().addTo(map);
+  mapReady = true;
+  return true;
+}
+function drawMap(){
+  if(!mapReady) return;
+  markerLayer.clearLayers();
+  var rows = DATA.filter(match), pts = [], plotted = 0;
+  rows.forEach(function(d){
+    var c = coords[d.id]; if(!c) return;
+    plotted++;
+    var st = (rec[d.id] || {}).st || "none";
+    L.circleMarker([c[0], c[1]], {
+      radius: 8, color:"#fff", weight:2, opacity:1,
+      fillColor: ST_COLOR[st] || ST_COLOR.none, fillOpacity:.95
+    }).addTo(markerLayer).on("click", function(){ openSheetFor(d.id); });
+    pts.push([c[0], c[1]]);
+  });
+  if(place && place.lat){
+    L.circleMarker([place.lat, place.lng], {
+      radius:9, color:"#7c4dff", weight:3, opacity:1, fillColor:"#7c4dff", fillOpacity:.35
+    }).addTo(markerLayer);
+    pts.push([place.lat, place.lng]);
+  }
+  if(pts.length) map.fitBounds(L.latLngBounds(pts).pad(0.15), {maxZoom:15});
+  var missing = rows.length - plotted;
+  mapTip(!plotted ? "這些單位還沒有座標，回清單等座標抓完再看地圖。"
+        : missing ? "" : "");
+  if(missing && plotted) toast(missing + " 家還沒有座標，暫時不會出現在地圖上");
+  setTimeout(function(){ map.invalidateSize(); }, 60);
+}
+function setView(v){
+  var isMap = v === "map";
+  $("#mapview").hidden = !isMap;
+  $("#list").hidden = isMap;
+  Array.prototype.forEach.call($("#viewtabs").querySelectorAll("button"), function(b){
+    b.setAttribute("aria-pressed", String(b.getAttribute("data-view") === v));
+  });
+  if(isMap){
+    if(!initMap()) return;
+    drawMap();
+    logEvent("看地圖", place ? place.d : "");
+  }
 }
 
 /* ============ 明細 ============ */
@@ -1102,6 +1232,11 @@ railEl.addEventListener("click", function(e){
   }
   renderRail(); render();
 });
+$("#viewtabs").addEventListener("click", function(e){
+  var b = e.target.closest("[data-view]"); if(b) setView(b.getAttribute("data-view"));
+});
+$("#zin").addEventListener("click", function(){ if(map) map.zoomIn(); });
+$("#zout").addEventListener("click", function(){ if(map) map.zoomOut(); });
 $("#place").addEventListener("click", function(e){
   if(e.target.closest("[data-locate]")) return locate();
   if(e.target.closest("[data-place]")) return openPlaceSheet();
