@@ -839,6 +839,10 @@ function showGate(msg){
     + '<h1>請用家人給你的邀請連結開啟</h1>'
     + '<p class="lead">這是私人的家庭照顧紀錄系統，要靠邀請連結才能使用。'
     + '跟家裡負責的人要一次連結（通常會用 LINE 傳給你），點開就能直接用。</p>'
+    + '<div class="gfield"><div class="lbl">已經有連結了？貼在這裡也可以</div>'
+    + '<input class="gbig" id="gLink" placeholder="長按貼上家人傳給你的那條連結" autocomplete="off" spellcheck="false"></div>'
+    + '<button class="gbtn-main" id="gUseLink">用這條連結開始</button>'
+    + '<div class="gmsg" id="gMsg">' + (msg || "") + '</div>'
     + '<div class="copy" style="margin-top:26px">© 2026 <b>AlinaLai</b> 版權所有　All rights reserved.</div>'
     + '<div class="gmsg" style="margin-top:14px">'
     + '<button id="gAdv" style="font-size:12.5px;color:var(--ink-3);text-decoration:underline">我是管理者，手動設定</button></div>';
@@ -877,6 +881,22 @@ $("#gate").addEventListener("click", function(e){
   if(e.target.closest("#gFill")){
     var ti = $("#gToken"); ti.value = TOKEN_HINT; ti.focus();
     var m = $("#gMsg"); m.className = "gmsg good"; m.textContent = "密語填好了，打上你的名字再按「開始使用」。";
+    return;
+  }
+  if(e.target.closest("#gUseLink")){
+    var raw = $("#gLink").value.trim(), m2 = $("#gMsg");
+    var api = (raw.match(/[?&]api=([^&\s]+)/) || [])[1];
+    var tk  = (raw.match(/[?&]t=([^&\s]+)/) || [])[1];
+    if(!api || !tk){
+      m2.className = "gmsg bad";
+      m2.textContent = "這條連結看起來不完整，請整條重貼一次（要從 https 開頭到最後）。";
+      return;
+    }
+    try{ cfg.api = decodeURIComponent(api); cfg.token = decodeURIComponent(tk); }
+    catch(err){ cfg.api = api; cfg.token = tk; }
+    saveCfg();
+    m2.className = "gmsg good"; m2.textContent = "連結收到了，接著填名字。";
+    gateAdv = false; showGate("");
     return;
   }
   if(e.target.closest("#gAdv")){ gateAdv = true; showGate("貼上 Apps Script 的 /exec 網址與通關密語。設定完請用「複製邀請連結」把設定傳給家人。"); return; }
@@ -1215,6 +1235,10 @@ function openPanel(){
   + '<b>這條連結等於鑰匙</b> —— 網址和密語都在裡面，只在家人群組傳，不要貼到公開的地方。</div>'
   + '<div class="linkrow" style="margin-top:10px"><button class="gbtn" id="copyInvite">複製邀請連結</button>'
   + '<button class="gbtn" id="reload">重新載入</button></div></div>'
+  + '<div class="sec"><h3 class="sectitle">重新設定連線</h3>'
+  + '<div class="tip">管理者換了密語、或這台一直顯示連不上時，用新的邀請連結重設一次。'
+  + '按下去只會清掉連線設定，寫過的紀錄都在雲端，不會不見。</div>'
+  + '<div class="linkrow" style="margin-top:10px"><button class="gbtn" id="resetConn">改用新的邀請連結</button></div></div>'
   + '<div class="sec"><h3 class="sectitle">版本與版權</h3>'
   + '<div class="tip">目前 v' + APP_VERSION + '。系統更新時會自動要求你重新載入。<br><br>'
   + '本系統由 <b>AlinaLai</b> 製作，© 2026 版權所有。僅供本人及授權家人使用，'
@@ -1359,6 +1383,12 @@ sheetInner.addEventListener("click", function(e){
     return copyText(link, "已複製邀請連結，貼給家人即可");
   }
   if(t.closest("#reload")){ location.replace(location.pathname + "?v=" + Date.now()); return; }
+  if(t.closest("#resetConn")){
+    cfg.api = ""; cfg.token = ""; saveCfg();
+    gateAdv = false; closeSheet(); setSync("err", "尚未設定");
+    showGate("請貼上家人傳給你的新邀請連結。");
+    return;
+  }
 });
 
 sheetInner.addEventListener("input", function(e){
