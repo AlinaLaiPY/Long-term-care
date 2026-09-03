@@ -8,6 +8,14 @@
 <meta name="apple-mobile-web-app-title" content="接送速查">
 <meta name="theme-color" content="#166F5F">
 <title>台中長照接送速查</title>
+<meta name="author" content="AlinaLai">
+<meta name="copyright" content="© 2026 AlinaLai 版權所有 All rights reserved.">
+<!--
+  台中長照接送速查
+  Copyright © 2026 AlinaLai. 版權所有，翻印必究。All rights reserved.
+  本系統之程式碼、介面設計與資料整理僅供 AlinaLai 及其授權之家人使用。
+  未經書面同意，不得重製、散布、修改或作商業使用。
+-->
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@700&family=IBM+Plex+Mono:wght@500;600&display=swap">
 <style>
 :root{
@@ -230,6 +238,8 @@ textarea{
 }
 .toast.on{opacity:1; transform:translate(-50%,0);}
 
+.copy{display:inline-block; margin-top:4px; color:var(--ink-3); font-size:11.5px; letter-spacing:.02em;}
+.copy b{color:var(--ink-2); font-weight:700;}
 .foot{margin-top:22px; padding-top:14px; border-top:1px solid var(--line-soft); font-size:11.5px; color:var(--ink-3); line-height:1.8;}
 
 
@@ -366,6 +376,7 @@ textarea{
   <div class="foot">
     資料來源：114–116年長期照顧服務特約單位一覽表（臺中市全市）· 交通接送服務及社區式服務交通接送 DA01／BD03。<br>
     <span id="footmode"></span><br>
+    <span class="copy">© 2026 <b>AlinaLai</b> 版權所有・未經同意請勿重製或散布</span><br>
     <button id="tools" class="sortbtn" style="margin:8px 0 0; padding:0;">設定・家人動態・備份</button>
   </div>
 </main>
@@ -760,7 +771,8 @@ function showGate(msg){
   + '<input class="gbig" id="gName" value="' + esc(dev.name) + '" placeholder="輸入你的名字或稱呼" autocomplete="off"></div>'
   + '<button class="gbtn-main" id="gGo">開始使用</button>'
   + '<div class="gmsg" id="gMsg">' + (msg || "") + '</div>'
-  + '<div class="gmsg" style="margin-top:22px"><span class="devchip">這台裝置 ' + dev.id + '</span>'
+  + '<div class="copy" style="margin-top:26px">© 2026 <b>AlinaLai</b> 版權所有　All rights reserved.</div>'
+  + '<div class="gmsg" style="margin-top:14px"><span class="devchip">這台裝置 ' + dev.id + '</span>'
   + (needApi ? "" : ' <button id="gAdv" style="font-size:12px;color:var(--ink-3);text-decoration:underline;margin-left:8px">進階設定</button>') + '</div>';
   $("#gate").hidden = false;
   document.body.style.overflow = "hidden";
@@ -1047,8 +1059,10 @@ function openPanel(){
   + '<div class="tip">傳這條連結給家人，他們打開只要填自己的名字就能用。</div>'
   + '<div class="linkrow" style="margin-top:10px"><button class="gbtn" id="copyInvite">複製邀請連結</button>'
   + '<button class="gbtn" id="reload">重新載入</button></div></div>'
-  + '<div class="sec"><h3 class="sectitle">版本</h3>'
-  + '<div class="tip">目前 v' + APP_VERSION + '。系統更新時會自動要求你重新載入。</div></div>'
+  + '<div class="sec"><h3 class="sectitle">版本與版權</h3>'
+  + '<div class="tip">目前 v' + APP_VERSION + '。系統更新時會自動要求你重新載入。<br><br>'
+  + '本系統由 <b>AlinaLai</b> 製作，© 2026 版權所有。僅供本人及授權家人使用，'
+  + '未經同意不得重製、散布或作商業用途。</div></div>'
   + '<div class="sheet-foot"><button class="prim" id="closeSheet">完成</button></div>';
   showSheet();
 }

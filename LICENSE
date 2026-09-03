@@ -1,0 +1,28 @@
+版權聲明 / Copyright Notice
+
+台中長照接送速查 (Taichung LTC Transport Lookup)
+Copyright © 2026 AlinaLai. 版權所有，翻印必究。
+All rights reserved.
+
+本專案之程式碼、介面設計、文件與資料整理成果，著作權均屬 AlinaLai 所有。
+本專案並非開源軟體。除下列情形外，保留一切權利：
+
+1. 授權使用者（AlinaLai 及其明示授權之家人）得為個人、非商業之照顧
+   協調目的使用本系統。
+2. 未經著作權人事前書面同意，任何人不得重製、散布、公開傳輸、改作、
+   出租、出售本專案之全部或部分內容，亦不得移除或變更本版權聲明。
+3. 本專案以現狀提供，不負任何明示或默示之擔保責任。使用本系統所生之
+   任何後果，由使用者自行承擔。
+
+名單資料原始來源為臺中市政府公開之「114–116 年長期照顧服務特約單位
+一覽表」，該原始資料之權利歸屬原機關；本專案主張之權利僅及於程式碼、
+介面設計與資料之整理編排。
+
+聯絡方式：透過本專案 GitHub 頁面之 Issues。
+
+---
+
+This project is NOT open source. All rights reserved.
+No permission is granted to copy, modify, distribute, or make commercial
+use of any part of this work without prior written consent from the
+copyright holder.
