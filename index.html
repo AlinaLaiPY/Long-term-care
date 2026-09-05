@@ -592,7 +592,7 @@ var ST_MAP = {}; STATUS.forEach(function(s){ST_MAP[s.v]=s.t;});
 
 /* ============ 版本（要跟 Apps Script 的 APP_VERSION 對應） ============ */
 var APP_VERSION = 3;
-var BUILD = "0905k";        // 每次改版遞增，用來確認手機拿到的版本
+var BUILD = "0905m";        // 每次改版遞增，用來確認手機拿到的版本
 
 /* ============================================================
  * 雲端網址與密語「刻意」不寫在這裡。
@@ -931,7 +931,10 @@ function showGate(msg){
       ? "輸入家人給你的通關密語，再打上你的名字，就可以開始用了。"
       : "打上你的名字或稱呼。之後每一筆紀錄都會標上是誰做的，家人才知道電話是誰打的、筆記是誰寫的。") + '</p>'
   + (gateAdv || !hasApi ? ''
-    + '<div class="gfield"><div class="lbl">APPS SCRIPT 網址（管理者用）</div>'
+    + '<div class="gfield"><div class="lbl">最快：把邀請連結整條貼在這裡</div>'
+    + '<input class="gbig" id="gLink" placeholder="貼上連結後按下面的「用這條連結開始」" autocomplete="off" spellcheck="false">'
+    + '<button type="button" class="hintfill" id="gUseLink" style="text-align:center">用這條連結開始</button></div>'
+    + '<div class="gfield"><div class="lbl">或手動填：APPS SCRIPT 網址</div>'
     + '<input class="gbig" id="gApi" value="' + esc(cfg.api) + '" placeholder="https://script.google.com/macros/s/.../exec" autocomplete="off" spellcheck="false" inputmode="url"></div>' : "")
   + (needTok ? ''
     + '<div class="gfield"><div class="lbl">通關密語</div>'
@@ -944,7 +947,9 @@ function showGate(msg){
   + '<div class="gmsg" id="gMsg">' + (msg || "") + '</div>'
   + '<div class="copy" style="margin-top:26px">© 2026 <b>AlinaLai</b> 版權所有　All rights reserved.</div>'
   + '<div class="gmsg" style="margin-top:14px"><span class="devchip">這台裝置 ' + dev.id + '</span>'
-  + (gateAdv ? "" : ' <button id="gAdv" style="font-size:12px;color:var(--ink-3);text-decoration:underline;margin-left:8px">進階設定</button>') + '</div>';
+  + (gateAdv
+      ? ' <button id="gBack" style="font-size:12.5px;color:var(--ink-3);text-decoration:underline;margin-left:8px">← 返回</button>'
+      : ' <button id="gAdv" style="font-size:12px;color:var(--ink-3);text-decoration:underline;margin-left:8px">進階設定</button>') + '</div>';
   $("#gate").hidden = false;
   document.body.style.overflow = "hidden";
 }
@@ -972,13 +977,20 @@ $("#gate").addEventListener("click", function(e){
     gateAdv = false; showGate("");
     return;
   }
+  if(e.target.closest("#gBack")){ gateAdv = false; showGate(""); return; }
   if(e.target.closest("#gAdv")){ gateAdv = true; showGate("貼上 Apps Script 的 /exec 網址與通關密語。設定完請用「複製邀請連結」把設定傳給家人。"); return; }
   var go = e.target.closest("#gGo"); if(!go) return;
   var api = $("#gApi") ? $("#gApi").value.trim() : cfg.api;
   var tk  = $("#gToken") ? $("#gToken").value.trim() : cfg.token;
   var nm  = $("#gName").value.trim();
   var msg = $("#gMsg");
-  if(!api){ msg.className = "gmsg bad"; msg.textContent = "缺少雲端網址，請按下面的「進階設定」填入。"; return; }
+  if(!api){
+    msg.className = "gmsg bad";
+    msg.textContent = $("#gApi")
+      ? "請貼上 Apps Script 的 /exec 網址（結尾要是 /exec）。"
+      : "請先用家人給你的邀請連結開啟。";
+    return;
+  }
   if(!tk){ msg.className = "gmsg bad"; msg.textContent = "請輸入通關密語。"; return; }
   if(!nm){ msg.className = "gmsg bad"; msg.textContent = "請輸入你的名字，家人才分得出是誰。"; return; }
   cfg.api = api; cfg.token = tk; saveCfg();
