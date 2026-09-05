@@ -529,7 +529,7 @@ var ST_MAP = {}; STATUS.forEach(function(s){ST_MAP[s.v]=s.t;});
 
 /* ============ 版本（要跟 Apps Script 的 APP_VERSION 對應） ============ */
 var APP_VERSION = 3;
-var BUILD = "0905e";        // 每次改版遞增，用來確認手機拿到的版本
+var BUILD = "0905f";        // 每次改版遞增，用來確認手機拿到的版本
 
 /* ============================================================
  * 雲端網址與密語「刻意」不寫在這裡。
@@ -1119,6 +1119,7 @@ function drawMap(){
   if(!mapReady) return;
   markerLayer.clearLayers();
   var rows = DATA.filter(match), pts = [], plotted = 0;
+  mapPins = [];
   rows.forEach(function(d){
     var c = coords[d.id]; if(!c) return;
     plotted++;
@@ -1135,6 +1136,7 @@ function drawMap(){
     }).addTo(markerLayer);
     mk.on("click", function(){ openFromMap(d.id); });
     if(mk._icon){ mk._icon.setAttribute("data-unit", d.id); mk._icon.setAttribute("role", "button"); }
+    mapPins.push({id:d.id, lat:c[0], lng:c[1]});
     pts.push([c[0], c[1]]);
   });
   if(place && place.lat){
@@ -1150,6 +1152,7 @@ function drawMap(){
   if(missing && plotted) toast(missing + " 家還沒有座標，暫時不會出現在地圖上");
   setTimeout(function(){ map.invalidateSize(); }, 60);
 }
+var mapPins = [];
 var lastOpen = {id:0, at:0};
 function openFromMap(id){
   var now = Date.now();
@@ -1161,16 +1164,28 @@ function bindMapTaps(){
   var el = $("#map");
   if(el.__bound) return;
   el.__bound = 1;
-  ["click"].forEach(function(ev){
-    el.addEventListener(ev, function(e){
-      var t = e.target;
-      var path = t && t.getAttribute && t.getAttribute("data-unit") ? t
-               : (t && t.closest ? t.closest("[data-unit]") : null);
-      if(!path) return;
-      var id = parseInt(path.getAttribute("data-unit"), 10);
-      if(id) openFromMap(id);
-    }, {passive:true});
-  });
+  el.addEventListener("click", function(e){
+    /* 先看點到的是不是圖釘本身 */
+    var t = e.target;
+    var hit = t && t.getAttribute && t.getAttribute("data-unit") ? t
+            : (t && t.closest ? t.closest("[data-unit]") : null);
+    if(hit){
+      var id = parseInt(hit.getAttribute("data-unit"), 10);
+      if(id){ openFromMap(id); return; }
+    }
+    /* 沒點中也沒關係：找手指位置 30px 內最近的圖釘。
+       這條不依賴圖釘元素本身的觸控判定，是最後一道保險。 */
+    if(!map || !mapPins.length) return;
+    var pt;
+    try{ pt = map.mouseEventToContainerPoint(e); }catch(err){ return; }
+    var best = null, bestD = 30;
+    for(var i = 0; i < mapPins.length; i++){
+      var p2 = map.latLngToContainerPoint([mapPins[i].lat, mapPins[i].lng]);
+      var dd = Math.sqrt((p2.x - pt.x) * (p2.x - pt.x) + (p2.y - pt.y) * (p2.y - pt.y));
+      if(dd < bestD){ bestD = dd; best = mapPins[i].id; }
+    }
+    if(best) openFromMap(best);
+  }, {passive:true});
 }
 
 function setView(v){
@@ -1287,7 +1302,7 @@ function openPanel(){
   + '按下去只會清掉連線設定，寫過的紀錄都在雲端，不會不見。</div>'
   + '<div class="linkrow" style="margin-top:10px"><button class="gbtn" id="resetConn">改用新的邀請連結</button></div></div>'
   + '<div class="sec"><h3 class="sectitle">版本與版權</h3>'
-  + '<div class="tip">目前 v' + APP_VERSION + '。系統更新時會自動要求你重新載入。<br><br>'
+  + '<div class="tip">目前版本 <b>v' + APP_VERSION + '-' + BUILD + '</b>。系統更新時會自動要求你重新載入。<br><br>'
   + '本系統由 <b>AlinaLai</b> 製作，© 2026 版權所有。僅供本人及授權家人使用，'
   + '未經同意不得重製、散布或作商業用途。</div></div>'
   + '<div class="sheet-foot"><button class="prim" id="closeSheet">完成</button></div>';
