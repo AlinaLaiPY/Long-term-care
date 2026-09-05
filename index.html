@@ -243,8 +243,15 @@ textarea{
 .copy{display:inline-block; margin-top:4px; color:var(--ink-3); font-size:11.5px; letter-spacing:.02em;}
 .copy b{color:var(--ink-2); font-weight:700;}
 /* ---------- 地圖 ---------- */
-.leaflet-pane,.leaflet-tile,.leaflet-tile-container,.leaflet-pane>svg,.leaflet-pane>canvas,.leaflet-layer{
+.leaflet-pane,.leaflet-tile,.leaflet-tile-container,.leaflet-pane>svg,.leaflet-pane>canvas,.leaflet-layer,
+.leaflet-marker-icon,.leaflet-marker-shadow{
   position:absolute; left:0; top:0;
+}
+.leaflet-marker-icon{cursor:pointer; -webkit-tap-highlight-color:rgba(0,0,0,.08);}
+.unitpin{display:flex; align-items:center; justify-content:center;}
+.unitpin b{
+  display:block; width:20px; height:20px; border-radius:50%;
+  border:2.5px solid #fff; box-shadow:0 1px 5px rgba(0,0,0,.45); pointer-events:none;
 }
 .leaflet-container{
   overflow:hidden; background:var(--surface-2); position:relative;
@@ -522,6 +529,7 @@ var ST_MAP = {}; STATUS.forEach(function(s){ST_MAP[s.v]=s.t;});
 
 /* ============ 版本（要跟 Apps Script 的 APP_VERSION 對應） ============ */
 var APP_VERSION = 3;
+var BUILD = "0905e";        // 每次改版遞增，用來確認手機拿到的版本
 
 /* ============================================================
  * 雲端網址與密語「刻意」不寫在這裡。
@@ -816,7 +824,7 @@ function setSync(st, err){
   txt.textContent = st === "ok" ? (sync.last ? "已同步 " + relTime(sync.last) : "已同步")
     : st === "busy" ? "同步中…" : st === "err" ? "未上傳" : "未連線";
   var fm = $("#footmode");
-  if(fm) fm.textContent = "這台裝置：" + (dev.name || "未命名") + "（" + dev.id + "）・紀錄同步到家人共用的試算表。";
+  if(fm) fm.textContent = "這台裝置：" + (dev.name || "未命名") + "（" + dev.id + "）・版本 v" + APP_VERSION + "-" + BUILD + "・紀錄同步到家人共用的試算表。";
   renderBanner();
 }
 function renderBanner(){
@@ -1115,14 +1123,18 @@ function drawMap(){
     var c = coords[d.id]; if(!c) return;
     plotted++;
     var st = (rec[d.id] || {}).st || "none";
-    var mk = L.circleMarker([c[0], c[1]], {
-      radius: 10, color:"#fff", weight:2.5, opacity:1, bubblingMouseEvents:false,
-      fillColor: ST_COLOR[st] || ST_COLOR.none, fillOpacity:.95
+    /* 用 HTML 元素當圖釘（divIcon），而不是 SVG 圓點 ——
+       iOS Safari 對 SVG 的觸控判定不穩，一般 div 最可靠，觸控範圍也比較大。 */
+    var mk = L.marker([c[0], c[1]], {
+      keyboard:false,
+      icon: L.divIcon({
+        className: "unitpin",
+        html: '<b style="background:' + (ST_COLOR[st] || ST_COLOR.none) + '"></b>',
+        iconSize: [28, 28], iconAnchor: [14, 14]
+      })
     }).addTo(markerLayer);
     mk.on("click", function(){ openFromMap(d.id); });
-    /* 保險：把序號寫在 SVG 元素上，另外用事件代理接一次。
-       iOS Safari 上 Leaflet 的觸控事件偶爾傳不到，這條是備援。 */
-    if(mk._path) mk._path.setAttribute("data-unit", d.id);
+    if(mk._icon){ mk._icon.setAttribute("data-unit", d.id); mk._icon.setAttribute("role", "button"); }
     pts.push([c[0], c[1]]);
   });
   if(place && place.lat){
@@ -1147,6 +1159,8 @@ function openFromMap(id){
 }
 function bindMapTaps(){
   var el = $("#map");
+  if(el.__bound) return;
+  el.__bound = 1;
   ["click"].forEach(function(ev){
     el.addEventListener(ev, function(e){
       var t = e.target;
