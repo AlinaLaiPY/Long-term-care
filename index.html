@@ -264,6 +264,8 @@ textarea{
 .leaflet-tile-pane{z-index:200;}
 .leaflet-overlay-pane{z-index:400;}
 .leaflet-marker-pane{z-index:600;}
+.leaflet-container svg{max-width:none !important; max-height:none !important;}
+.leaflet-pane>svg path.leaflet-interactive{pointer-events:auto; cursor:pointer;}
 .leaflet-interactive{cursor:pointer;}
 :root[data-theme="dark"] .leaflet-tile-pane{filter:brightness(.78) saturate(.85) contrast(1.05);}
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .leaflet-tile-pane{filter:brightness(.78) saturate(.85) contrast(1.05);}}
@@ -1101,6 +1103,7 @@ function initMap(){
          .setView([24.15, 120.68], 11);
   L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {maxZoom:18, minZoom:9}).addTo(map);
   markerLayer = L.layerGroup().addTo(map);
+  bindMapTaps();
   mapReady = true;
   return true;
 }
@@ -1112,10 +1115,14 @@ function drawMap(){
     var c = coords[d.id]; if(!c) return;
     plotted++;
     var st = (rec[d.id] || {}).st || "none";
-    L.circleMarker([c[0], c[1]], {
+    var mk = L.circleMarker([c[0], c[1]], {
       radius: 10, color:"#fff", weight:2.5, opacity:1, bubblingMouseEvents:false,
       fillColor: ST_COLOR[st] || ST_COLOR.none, fillOpacity:.95
-    }).addTo(markerLayer).on("click", function(){ openSheetFor(d.id); });
+    }).addTo(markerLayer);
+    mk.on("click", function(){ openFromMap(d.id); });
+    /* 保險：把序號寫在 SVG 元素上，另外用事件代理接一次。
+       iOS Safari 上 Leaflet 的觸控事件偶爾傳不到，這條是備援。 */
+    if(mk._path) mk._path.setAttribute("data-unit", d.id);
     pts.push([c[0], c[1]]);
   });
   if(place && place.lat){
@@ -1131,6 +1138,27 @@ function drawMap(){
   if(missing && plotted) toast(missing + " 家還沒有座標，暫時不會出現在地圖上");
   setTimeout(function(){ map.invalidateSize(); }, 60);
 }
+var lastOpen = {id:0, at:0};
+function openFromMap(id){
+  var now = Date.now();
+  if(lastOpen.id === id && now - lastOpen.at < 700) return;   // 同一點短時間內只開一次
+  lastOpen = {id:id, at:now};
+  openSheetFor(id);
+}
+function bindMapTaps(){
+  var el = $("#map");
+  ["click"].forEach(function(ev){
+    el.addEventListener(ev, function(e){
+      var t = e.target;
+      var path = t && t.getAttribute && t.getAttribute("data-unit") ? t
+               : (t && t.closest ? t.closest("[data-unit]") : null);
+      if(!path) return;
+      var id = parseInt(path.getAttribute("data-unit"), 10);
+      if(id) openFromMap(id);
+    }, {passive:true});
+  });
+}
+
 function setView(v){
   var isMap = v === "map";
   $("#mapview").hidden = !isMap;
@@ -1147,7 +1175,12 @@ function setView(v){
 
 /* ============ 明細 ============ */
 var sheet = $("#sheet"), scrim = $("#scrim"), sheetInner = $("#sheetInner"), openId = null, saveTimer = null;
-function showSheet(){ scrim.classList.add("on"); sheet.classList.add("on"); document.body.style.overflow = "hidden"; }
+var sheetOpenedAt = 0;
+function showSheet(){
+  sheetOpenedAt = Date.now();
+  scrim.classList.add("on"); sheet.classList.add("on");
+  document.body.style.overflow = "hidden";
+}
 function closeSheet(){ scrim.classList.remove("on"); sheet.classList.remove("on"); document.body.style.overflow = ""; openId = null; render(); }
 
 function openSheetFor(id){
@@ -1316,7 +1349,12 @@ listEl.addEventListener("click", function(e){
 $("#banner").addEventListener("click", function(e){ if(e.target.closest("[data-panel]")) pull(); });
 $("#tools").addEventListener("click", openPanel);
 $("#syncBtn").addEventListener("click", openPanel);
-scrim.addEventListener("click", closeSheet);
+scrim.addEventListener("click", function(){
+  /* iOS 在觸控後約 300ms 會補送一次 click，剛打開就收到的那一次要忽略，
+     否則使用者會覺得「點了圖釘沒反應」（其實是開了又被關掉）。 */
+  if(Date.now() - sheetOpenedAt < 600) return;
+  closeSheet();
+});
 
 sheetInner.addEventListener("click", function(e){
   var t = e.target;
