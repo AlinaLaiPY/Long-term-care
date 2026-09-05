@@ -592,23 +592,23 @@ var ST_MAP = {}; STATUS.forEach(function(s){ST_MAP[s.v]=s.t;});
 
 /* ============ 版本（要跟 Apps Script 的 APP_VERSION 對應） ============ */
 var APP_VERSION = 3;
-var BUILD = "0905m";        // 每次改版遞增，用來確認手機拿到的版本
+var BUILD = "0905n";        // 每次改版遞增，用來確認手機拿到的版本
 
 /* ============================================================
- * 雲端網址與密語「刻意」不寫在這裡。
+ * 雲端網址寫在這裡，打開網址就能用，不必保管邀請連結。
  *
- * 這份程式碼是公開的，任何人都看得到。若把 Apps Script 網址和
- * 通關密語寫進來，等於把鑰匙掛在門上。
+ * 取捨：這份程式碼是公開的，寫在這裡等於門沒有鎖 —— 拿到網址的
+ * 人只要再猜中密語就進得來。之所以這樣選，是因為使用者是長輩，
+ * 「連結弄丟就永遠進不去」的代價比被看到高得多。
  *
- * 家人一律用管理者傳出去的「邀請連結」開啟，設定值只存在那條
- * 連結和各自的手機裡；管理者第一次設定走進場畫面的「我是管理者」。
- *
- * 除非你願意讓任何人都能讀寫你的試算表，否則不要在這裡填東西。
+ * 換試算表或重新部署後網址變了，改這一行即可。
+ * 若哪天想改回「只能靠邀請連結」，把這行設成 "" 就是了。
  * ==========================================================*/
-var DEFAULT_API = "";
+var DEFAULT_API = "https://script.google.com/macros/s/AKfycbxQqsFjIl-kLk94UnVRvtT5cePu0r6jrUrPIbJQvJH9NnzLRvLxNxUS_-mV6m34A0HFkw/exec";
 
-/* 密語提示：同理，公開頁面不放提示。留空即可。 */
-var TOKEN_HINT = "";
+/* 密語提示：顯示在輸入格下面，點一下自動填，長輩不用記。
+ * 改了 Apps Script 的 TOKEN 記得這裡一起改；設成 "" 就不顯示。 */
+var TOKEN_HINT = "1234";
 
 /* ============ 儲存 ============ */
 var CFGKEY = "tc-ltc-cfg-v1", KEY = "tc-ltc-transport-v1", PKEY = "tc-ltc-pending-v1",
@@ -634,7 +634,7 @@ var cfg = {api:DEFAULT_API, token:""};
   var c = readLS(CFGKEY, null);
   if(c){
     if(c.api) cfg.api = c.api;
-    if(!c.api && DEFAULT_API) cfg.api = DEFAULT_API;
+    if(!c.api && DEFAULT_API) cfg.api = DEFAULT_API;   // 設定被清掉時自動補回內建網址
     if(c.token) cfg.token = c.token;
     if(c.user && !dev.name){ dev.name = c.user; saveDev(); }   // 舊版的名字搬到裝置上
   }
