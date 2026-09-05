@@ -364,69 +364,45 @@ textarea{
 .state .syncpill{margin-left:0; padding:6px 13px 6px 11px; font-size:13px;}
 
 
-/* ---------- 教學 ---------- */
-.tour{
-  position:fixed; inset:0; z-index:95; background:var(--ground); overflow-y:auto;
-  padding:calc(20px + env(safe-area-inset-top)) 18px calc(20px + env(safe-area-inset-bottom));
-  display:flex; flex-direction:column;
+/* ---------- 聚光燈導覽 ---------- */
+.coach{position:fixed; inset:0; z-index:96;}
+.coach-hole{
+  position:absolute; border-radius:14px; pointer-events:none;
+  box-shadow:0 0 0 9999px rgba(8,18,20,.72), 0 0 0 3px var(--accent) inset;
+  transition:top .32s cubic-bezier(.32,.72,0,1), left .32s cubic-bezier(.32,.72,0,1),
+             width .32s cubic-bezier(.32,.72,0,1), height .32s cubic-bezier(.32,.72,0,1);
 }
-.tour-box{max-width:440px; margin:0 auto; width:100%; display:flex; flex-direction:column; flex:1;}
-.tour-step{font-size:12px; letter-spacing:.16em; color:var(--ink-3); margin-bottom:10px;}
-.tour h2{font-family:var(--serif); font-weight:700; font-size:24px; line-height:1.45; margin:0 0 10px; text-wrap:balance;}
-.tour p{font-size:17px; line-height:1.9; color:var(--ink-2); margin:0 0 18px;}
-.tour p b{color:var(--ink);}
-.tour-foot{margin-top:auto; padding-top:18px;}
-.tour-dots{display:flex; gap:6px; justify-content:center; margin-bottom:14px;}
-.tour-dots i{width:8px; height:8px; border-radius:50%; background:var(--line); display:block;}
-.tour-dots i.on{background:var(--accent); width:22px; border-radius:99px;}
-.tour-btns{display:flex; gap:10px;}
-.tour-btns button{
-  flex:1; padding:16px; border-radius:14px; font-size:17px; font-weight:700;
-  border:1px solid var(--line); background:var(--surface); color:var(--ink);
+.coach-hole.center{box-shadow:0 0 0 9999px rgba(8,18,20,.72);}
+.coach-ring{
+  position:absolute; border-radius:16px; border:3px solid var(--accent); pointer-events:none;
+  animation:coachPulse 1.6s ease-in-out infinite;
+  transition:top .32s cubic-bezier(.32,.72,0,1), left .32s cubic-bezier(.32,.72,0,1),
+             width .32s cubic-bezier(.32,.72,0,1), height .32s cubic-bezier(.32,.72,0,1);
 }
-.tour-btns .go{background:var(--accent); color:var(--on-accent); border-color:transparent; flex:2;}
-.tour-skip{display:block; width:100%; text-align:center; margin-top:12px; font-size:14px; color:var(--ink-3); text-decoration:underline; padding:8px;}
-
-/* 示範用的小畫面 */
-.scene{
-  position:relative; height:190px; border-radius:16px; overflow:hidden; margin-bottom:20px;
-  background:var(--surface-2); border:1px solid var(--line-soft);
+@keyframes coachPulse{50%{transform:scale(1.04); opacity:.55;}}
+.coach-tip{
+  position:absolute; left:12px; right:12px; background:var(--surface); color:var(--ink);
+  border-radius:18px; padding:18px 18px 16px; box-shadow:0 12px 40px rgba(0,0,0,.4);
+  max-height:52vh; overflow-y:auto; -webkit-overflow-scrolling:touch;
+  transition:top .32s cubic-bezier(.32,.72,0,1);
 }
-.scene *{box-sizing:border-box;}
-.sc-card{
-  position:absolute; left:14px; right:14px; height:34px; border-radius:9px; background:var(--surface);
-  border:1px solid var(--line); display:flex; align-items:center; padding:0 10px; font-size:12px; color:var(--ink-2);
-  box-shadow:0 1px 3px rgba(0,0,0,.05);
+.coach-step{font-size:12px; letter-spacing:.14em; color:var(--ink-3); margin-bottom:8px;}
+.coach-tip h2{font-family:var(--serif); font-weight:700; font-size:21px; line-height:1.45; margin:0 0 8px;}
+.coach-tip p{font-size:16px; line-height:1.85; color:var(--ink-2); margin:0 0 16px;}
+.coach-tip p b{color:var(--ink);}
+.coach-dots{display:flex; gap:5px; justify-content:center; margin-bottom:12px;}
+.coach-dots i{width:7px; height:7px; border-radius:50%; background:var(--line); display:block;}
+.coach-dots i.on{background:var(--accent); width:20px; border-radius:99px;}
+.coach-btns{display:flex; gap:9px;}
+.coach-btns button{
+  flex:1; padding:14px; border-radius:13px; font-size:16px; font-weight:700;
+  border:1px solid var(--line); background:var(--surface-2); color:var(--ink);
 }
-.sc-btn{
-  position:absolute; border-radius:10px; background:var(--accent); color:var(--on-accent);
-  font-size:13px; font-weight:700; display:flex; align-items:center; justify-content:center;
-}
-.sc-pill{
-  position:absolute; border-radius:8px; background:var(--surface); border:1px solid var(--line);
-  font-size:11.5px; display:flex; align-items:center; justify-content:center; color:var(--ink-2);
-}
-.finger{
-  position:absolute; width:30px; height:30px; border-radius:50%; z-index:5;
-  background:rgba(23,38,42,.22); border:2px solid rgba(23,38,42,.45);
-}
-:root[data-theme="dark"] .finger{background:rgba(255,255,255,.22); border-color:rgba(255,255,255,.5);}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .finger{background:rgba(255,255,255,.22); border-color:rgba(255,255,255,.5);}}
-.ripple{position:absolute; width:30px; height:30px; border-radius:50%; border:2px solid var(--accent); z-index:4;}
-
-@keyframes slideIn{from{opacity:0; transform:translateY(14px);} to{opacity:1; transform:none;}}
-@keyframes tapMove{0%{opacity:0;} 12%{opacity:1;} 45%{transform:none;} 55%{transform:scale(.72);} 70%{transform:none;} 100%{opacity:1;}}
-@keyframes pop{0%,40%{opacity:0; transform:scale(.6);} 55%{opacity:1; transform:scale(1.08);} 65%,100%{opacity:1; transform:scale(1);}}
-@keyframes ripple{0%,50%{opacity:0; transform:scale(.6);} 60%{opacity:.8;} 100%{opacity:0; transform:scale(2.6);}}
-@keyframes typing{0%,45%{width:0;} 90%,100%{width:78%;}}
-@keyframes riseUp{0%,45%{transform:translateY(100%);} 70%,100%{transform:translateY(0);}}
-@keyframes fillGreen{0%,45%{background:var(--surface); color:var(--ink-2); border-color:var(--line);}
-  60%,100%{background:var(--accent-soft); color:var(--accent-ink); border-color:transparent; font-weight:700;}}
-@keyframes fadeIn{0%,55%{opacity:0;} 75%,100%{opacity:1;}}
-.anim{animation-duration:2.6s; animation-iteration-count:infinite; animation-timing-function:ease-in-out;}
+.coach-btns .go{background:var(--accent); color:var(--on-accent); border-color:transparent; flex:2;}
+.coach-skip{display:block; width:100%; text-align:center; margin-top:10px; font-size:13.5px; color:var(--ink-3); text-decoration:underline; padding:6px;}
 @media (prefers-reduced-motion: reduce){
-  .anim{animation:none !important;}
-  .scene .finger{opacity:1 !important;}
+  .coach-hole,.coach-ring,.coach-tip{transition:none !important;}
+  .coach-ring{animation:none !important;}
 }
 
 /* ---------- 進場設定 / 強制更新 ---------- */
@@ -545,7 +521,11 @@ textarea{
   </div>
 </main>
 
-<div class="tour" id="tour" hidden><div class="tour-box" id="tourBox"></div></div>
+<div class="coach" id="tour" hidden>
+  <div class="coach-hole" id="coachHole"></div>
+  <div class="coach-ring" id="coachRing"></div>
+  <div class="coach-tip" id="tourBox"></div>
+</div>
 <div class="gate" id="gate" hidden><div class="gatebox" id="gateBox"></div></div>
 <div class="gate" id="upgate" hidden><div class="gatebox" id="upBox"></div></div>
 <div class="scrim" id="scrim"></div>
@@ -612,7 +592,7 @@ var ST_MAP = {}; STATUS.forEach(function(s){ST_MAP[s.v]=s.t;});
 
 /* ============ 版本（要跟 Apps Script 的 APP_VERSION 對應） ============ */
 var APP_VERSION = 3;
-var BUILD = "0905i";        // 每次改版遞增，用來確認手機拿到的版本
+var BUILD = "0905k";        // 每次改版遞增，用來確認手機拿到的版本
 
 /* ============================================================
  * 雲端網址與密語「刻意」不寫在這裡。
@@ -1179,108 +1159,105 @@ function renderRail(){
   railEl.innerHTML = chips.join("");
 }
 
-/* ============ 教學 ============ */
+/* ============ 聚光燈導覽 ============ */
 var TOURKEY = "tc-ltc-tour-v1", tourStep = 0;
 
+/* sel 指向畫面上真的存在的東西；null 代表置中說明（沒有對應元件） */
 var TOUR = [
-  {
-    t: "這是什麼？",
-    d: "這裡有 <b>39 家</b>可以載長輩去看病、復健的單位。<br>電話、地址都在裡面，一按就能打電話。",
-    art: '<div class="scene">'
-       + '<div class="sc-card anim" style="top:20px; animation-name:slideIn; animation-iteration-count:1; animation-fill-mode:backwards; animation-delay:.05s">臺中市立仁愛之家</div>'
-       + '<div class="sc-card anim" style="top:64px; animation-name:slideIn; animation-iteration-count:1; animation-fill-mode:backwards; animation-delay:.25s">大慶居家護理所</div>'
-       + '<div class="sc-card anim" style="top:108px; animation-name:slideIn; animation-iteration-count:1; animation-fill-mode:backwards; animation-delay:.45s">博佑診所</div>'
-       + '<div class="sc-card anim" style="top:152px; animation-name:slideIn; animation-iteration-count:1; animation-fill-mode:backwards; animation-delay:.65s">松德租賃有限公司</div>'
-       + '</div>'
-  },
-  {
-    t: "先告訴它你住哪裡",
-    d: "按 <b>「用我現在的位置」</b>，它會自動找出<b>能來你這一區</b>的單位，<br>並且從最近的開始排。",
-    art: '<div class="scene">'
-       + '<div class="sc-btn" style="left:14px; top:26px; width:150px; height:42px;">用我現在的位置</div>'
-       + '<div class="sc-pill" style="left:178px; top:26px; width:100px; height:42px;">輸入地址</div>'
-       + '<div class="finger anim" style="left:72px; top:34px; animation-name:tapMove"></div>'
-       + '<div class="ripple anim" style="left:72px; top:34px; animation-name:ripple"></div>'
-       + '<div class="sc-card anim" style="top:92px; animation-name:pop">共 22 家可以來你這一區</div>'
-       + '<div class="sc-card anim" style="top:136px; animation-name:pop; animation-delay:.25s">最近的：1.2 公里</div>'
-       + '</div>'
-  },
-  {
-    t: "打電話給他們",
-    d: "看到合適的，按卡片下面的 <b>「撥打電話」</b>，<br>手機會直接幫你撥出去，不用自己抄號碼。",
-    art: '<div class="scene">'
-       + '<div class="sc-card" style="top:24px; height:56px; align-items:flex-start; padding-top:8px; font-size:12.5px;">博佑診所<br><span style="color:var(--ink-3); font-size:11px">臺中市大里區塗城路546號</span></div>'
-       + '<div class="sc-btn" style="left:14px; top:88px; width:96px; height:38px;">撥打電話</div>'
-       + '<div class="sc-pill" style="left:118px; top:88px; width:80px; height:38px;">開地圖</div>'
-       + '<div class="sc-pill" style="left:206px; top:88px; width:80px; height:38px;">寫紀錄</div>'
-       + '<div class="finger anim" style="left:47px; top:94px; animation-name:tapMove"></div>'
-       + '<div class="ripple anim" style="left:47px; top:94px; animation-name:ripple"></div>'
-       + '<div class="sc-card anim" style="top:140px; justify-content:center; animation-name:fadeIn">正在撥號…</div>'
-       + '</div>'
-  },
-  {
-    t: "打完把結果記下來",
-    d: "點一下卡片，選 <b>「可接送」</b>或<b>「不接」</b>，還可以寫幾句話。<br>寫下去<b>全家人都看得到</b>，不會有人重複打同一家。",
-    art: '<div class="scene">'
-       + '<div class="sc-pill" style="left:14px; top:24px; width:60px; height:34px;">未聯絡</div>'
-       + '<div class="sc-pill" style="left:80px; top:24px; width:60px; height:34px;">已聯絡</div>'
-       + '<div class="sc-pill anim" style="left:146px; top:24px; width:60px; height:34px; animation-name:fillGreen">可接送</div>'
-       + '<div class="sc-pill" style="left:212px; top:24px; width:60px; height:34px;">待確認</div>'
-       + '<div class="finger anim" style="left:161px; top:26px; animation-name:tapMove"></div>'
-       + '<div class="sc-card" style="top:74px; height:96px; align-items:flex-start; padding:10px; font-size:12px; color:var(--ink-3);">'
-       + '我的紀錄<div class="anim" style="height:11px; border-radius:4px; background:var(--accent-soft); margin-top:10px; animation-name:typing"></div>'
-       + '<div class="anim" style="height:11px; border-radius:4px; background:var(--accent-soft); margin-top:7px; width:52%; animation-name:typing; animation-delay:.3s"></div></div>'
-       + '</div>'
-  },
-  {
-    t: "也可以看地圖",
-    d: "上面切到 <b>「地圖」</b>，就看得到每一家在哪裡。<br>點圓點會跳出那家的電話和地址。",
-    art: '<div class="scene" style="background:linear-gradient(0deg, var(--surface-2) 0%, var(--surface) 100%);">'
-       + '<div class="sc-pill" style="left:14px; top:14px; width:52px; height:28px;">清單</div>'
-       + '<div class="sc-btn" style="left:70px; top:14px; width:52px; height:28px;">地圖</div>'
-       + '<div style="position:absolute; left:60px; top:64px; width:16px; height:16px; border-radius:50%; background:#166F5F; border:2.5px solid #fff;"></div>'
-       + '<div style="position:absolute; left:140px; top:96px; width:16px; height:16px; border-radius:50%; background:#7B8F8C; border:2.5px solid #fff;"></div>'
-       + '<div style="position:absolute; left:216px; top:58px; width:16px; height:16px; border-radius:50%; background:#2A5B86; border:2.5px solid #fff;"></div>'
-       + '<div class="finger anim" style="left:132px; top:89px; animation-name:tapMove"></div>'
-       + '<div class="ripple anim" style="left:132px; top:89px; animation-name:ripple"></div>'
-       + '<div class="anim" style="position:absolute; left:0; right:0; bottom:0; height:56px; background:var(--surface); border-top:1px solid var(--line); border-radius:14px 14px 0 0; padding:10px 12px; font-size:12.5px; animation-name:riseUp;">'
-       + '博佑診所<br><span style="color:var(--ink-3); font-size:11px">04-2496-7090　距離 1.2 公里</span></div>'
-       + '</div>'
-  },
-  {
-    t: "放到桌面，以後一按就開",
-    d: "按手機下面的 <b>分享</b> 圖示 → 往下找 <b>「加入主畫面」</b>。<br>之後就跟其他 App 一樣，桌面按一下就打開。",
-    art: '<div class="scene">'
-       + '<div class="sc-pill" style="left:calc(50% - 22px); top:22px; width:44px; height:44px; font-size:20px;">↑</div>'
-       + '<div class="finger anim" style="left:calc(50% - 15px); top:27px; animation-name:tapMove"></div>'
-       + '<div class="sc-card anim" style="top:82px; animation-name:fadeIn">加入主畫面</div>'
-       + '<div class="anim" style="position:absolute; left:calc(50% - 26px); top:128px; width:52px; height:52px; border-radius:13px; background:var(--accent); color:var(--on-accent); display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; animation-name:pop; animation-delay:.4s;">接送<br>速查</div>'
-       + '</div>'
-  }
+  { sel:"#q",
+    t:"要找誰，打在這裡",
+    d:"單位名字、地區、電話、你自己寫的筆記，<b>打幾個字就會篩出來</b>。" },
+  { sel:"#place",
+    t:"先告訴它你在哪裡",
+    d:"按 <b>「用我現在的位置」</b>，或輸入長輩家的地址。<br>它只留下<b>能來你這一區</b>的單位，而且<b>從最近的排到最遠</b>。" },
+  { sel:".card .acts a[data-act='call']",
+    t:"要打電話，按這裡",
+    d:"手機會<b>直接撥出去</b>，號碼不用自己抄。" },
+  { sel:".card .acts button[data-open]",
+    t:"打完，把結果記下來",
+    d:"選「可接送」或「不接」，可以再寫幾句話。<br><b>全家人都看得到</b>，不會有人重複打同一家。" },
+  { sel:"#viewtabs",
+    t:"想看位置就切到地圖",
+    d:"每一家在哪裡一目了然，<b>點圓點</b>就會跳出電話和地址。" },
+  { sel:"#help",
+    t:"忘記怎麼用，按這個問號",
+    d:"隨時可以再走一次這個導覽。" },
+  { sel:null,
+    t:"放到桌面，以後一按就開",
+    d:"按手機下面的<b>分享</b>圖示 → 往下找 <b>「加入主畫面」</b>。<br>之後就像其他 App 一樣，桌面按一下就打開。" }
 ];
+
+function coachTarget(step){
+  if(!step.sel) return null;
+  return document.querySelector(step.sel);
+}
+function placeCoach(){
+  var step = TOUR[tourStep], el = coachTarget(step);
+  var hole = $("#coachHole"), ring = $("#coachRing"), tip = $("#tourBox");
+  var vh = window.innerHeight;
+
+  if(!el){                                   /* 沒有對應元件：聚光燈收起來，說明置中 */
+    hole.className = "coach-hole center";
+    hole.style.cssText = "top:50%;left:50%;width:0;height:0;";
+    ring.style.opacity = "0";
+    tip.style.top = Math.max(60, (vh - tip.offsetHeight) / 2) + "px";
+    return;
+  }
+  var r = el.getBoundingClientRect(), pad = 8;
+  hole.className = "coach-hole";
+  hole.style.top = (r.top - pad) + "px";
+  hole.style.left = (r.left - pad) + "px";
+  hole.style.width = (r.width + pad * 2) + "px";
+  hole.style.height = (r.height + pad * 2) + "px";
+  ring.style.opacity = "1";
+  ring.style.top = (r.top - pad - 2) + "px";
+  ring.style.left = (r.left - pad - 2) + "px";
+  ring.style.width = (r.width + pad * 2 + 4) + "px";
+  ring.style.height = (r.height + pad * 2 + 4) + "px";
+
+  /* 說明框優先放聚光燈下面；放不下就放上面；兩邊都不夠就選空間大的那側 */
+  var th = tip.offsetHeight || 220;
+  var roomBelow = vh - r.bottom - 30, roomAbove = r.top - 30;
+  if(th <= roomBelow)      tip.style.top = (r.bottom + 18) + "px";
+  else if(th <= roomAbove) tip.style.top = (r.top - th - 18) + "px";
+  else if(roomBelow >= roomAbove) tip.style.top = (r.bottom + 14) + "px";
+  else                     tip.style.top = "12px";
+}
 
 function showTour(i){
   tourStep = Math.max(0, Math.min(i, TOUR.length - 1));
-  var s = TOUR[tourStep], last = tourStep === TOUR.length - 1;
-  $("#tourBox").innerHTML = ''
-  + '<div class="tour-step">使用說明　' + (tourStep + 1) + ' / ' + TOUR.length + '</div>'
-  + '<h2>' + s.t + '</h2>'
-  + s.art
-  + '<p>' + s.d + '</p>'
-  + '<div class="tour-foot">'
-  +   '<div class="tour-dots">' + TOUR.map(function(_, n){ return '<i class="' + (n === tourStep ? "on" : "") + '"></i>'; }).join("") + '</div>'
-  +   '<div class="tour-btns">'
-  +     (tourStep > 0 ? '<button data-tour="prev">上一步</button>' : "")
-  +     '<button class="go" data-tour="' + (last ? "done" : "next") + '">' + (last ? "開始使用" : "下一步") + '</button>'
-  +   '</div>'
-  +   (last ? "" : '<button class="tour-skip" data-tour="done">略過說明</button>')
-  + '</div>';
+  var step = TOUR[tourStep], last = tourStep === TOUR.length - 1;
+
+  /* 導覽前把畫面回到清單、捲到看得到目標的位置 */
+  if(typeof setView === "function" && $("#mapview") && !$("#mapview").hidden) setView("list");
   $("#tour").hidden = false;
-  document.body.style.overflow = "hidden";
+
+  $("#tourBox").innerHTML = ''
+  + '<div class="coach-step">使用說明　' + (tourStep + 1) + ' / ' + TOUR.length + '</div>'
+  + '<h2>' + step.t + '</h2>'
+  + '<p>' + step.d + '</p>'
+  + '<div class="coach-dots">' + TOUR.map(function(_, n){ return '<i class="' + (n === tourStep ? "on" : "") + '"></i>'; }).join("") + '</div>'
+  + '<div class="coach-btns">'
+  +   (tourStep > 0 ? '<button data-tour="prev">上一步</button>' : "")
+  +   '<button class="go" data-tour="' + (last ? "done" : "next") + '">' + (last ? "開始使用" : "下一步") + '</button>'
+  + '</div>'
+  + (last ? "" : '<button class="coach-skip" data-tour="done">略過說明</button>');
+
+  var el = coachTarget(step);
+  if(el){
+    /* 固定在頁首的元件捲了也不會動，不要白捲 */
+    var inHeader = !!(el.closest && el.closest(".top"));
+    if(!inHeader){
+      var r0 = el.getBoundingClientRect();
+      window.scrollBy(0, r0.top - window.innerHeight * 0.3);   // 目標放到上方三成處
+    }
+  } else {
+    window.scrollTo(0, 0);
+  }
+  requestAnimationFrame(function(){ requestAnimationFrame(placeCoach); });
 }
 function endTour(){
   $("#tour").hidden = true;
-  document.body.style.overflow = "";
   try{ localStorage.setItem(TOURKEY, "1"); }catch(e){}
 }
 $("#tour").addEventListener("click", function(e){
@@ -1290,10 +1267,11 @@ $("#tour").addEventListener("click", function(e){
   else if(a === "prev") showTour(tourStep - 1);
   else { endTour(); logEvent("看過教學", ""); }
 });
+window.addEventListener("resize", function(){ if(!$("#tour").hidden) placeCoach(); });
 function maybeTour(){
   var seen = "";
   try{ seen = localStorage.getItem(TOURKEY) || ""; }catch(e){}
-  if(!seen) showTour(0);
+  if(!seen) setTimeout(function(){ showTour(0); }, 400);   /* 等清單畫好再開始 */
 }
 
 /* ============ 地圖 ============ */
