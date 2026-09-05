@@ -248,7 +248,12 @@ textarea{
   position:absolute; left:0; top:0;
 }
 .leaflet-marker-icon{cursor:pointer; -webkit-tap-highlight-color:rgba(0,0,0,.08);}
-.unitpin{display:flex; align-items:center; justify-content:center;}
+.unitpin,.mepin{display:flex; align-items:center; justify-content:center;}
+.mepin b{
+  display:block; width:16px; height:16px; border-radius:50%;
+  background:#7c4dff; border:3px solid #fff;
+  box-shadow:0 0 0 4px rgba(124,77,255,.3), 0 1px 5px rgba(0,0,0,.4); pointer-events:none;
+}
 .unitpin b{
   display:block; width:20px; height:20px; border-radius:50%;
   border:2.5px solid #fff; box-shadow:0 1px 5px rgba(0,0,0,.45); pointer-events:none;
@@ -286,6 +291,7 @@ textarea{
 }
 #map{height:min(64dvh, 520px);}
 .mapzoom{position:absolute; right:10px; bottom:34px; z-index:800; display:flex; flex-direction:column; gap:4px;}
+.mapzoom button:first-child{font-size:15px;}
 .mapzoom button{
   width:34px; height:34px; border-radius:9px; background:var(--surface); border:1px solid var(--line);
   font-size:18px; line-height:1; color:var(--ink); box-shadow:var(--shadow);
@@ -441,7 +447,11 @@ textarea{
   <div id="mapview" hidden>
     <div class="mapwrap">
       <div id="map"></div>
-      <div class="mapzoom"><button id="zin" aria-label="放大">＋</button><button id="zout" aria-label="縮小">－</button></div>
+      <div class="mapzoom">
+        <button id="zme" aria-label="回到我的位置" title="回到我的位置">◎</button>
+        <button id="zin" aria-label="放大">＋</button>
+        <button id="zout" aria-label="縮小">－</button>
+      </div>
       <div class="mapattr">圖資 © OpenStreetMap 貢獻者</div>
       <div class="maptip" id="maptip" hidden></div>
     </div>
@@ -529,7 +539,7 @@ var ST_MAP = {}; STATUS.forEach(function(s){ST_MAP[s.v]=s.t;});
 
 /* ============ 版本（要跟 Apps Script 的 APP_VERSION 對應） ============ */
 var APP_VERSION = 3;
-var BUILD = "0905f";        // 每次改版遞增，用來確認手機拿到的版本
+var BUILD = "0905g";        // 每次改版遞增，用來確認手機拿到的版本
 
 /* ============================================================
  * 雲端網址與密語「刻意」不寫在這裡。
@@ -950,6 +960,7 @@ function setPlace(d, label, lat, lng){
   if(place.lat) state.sort = "km";
   savePlace(); state.dist = d;
   if(sheet.classList.contains("on")) closeSheet();
+  lastFitKey = "";                     // 換了地點就重新對焦到新位置
   renderPlace(); renderRail(); render();
   toast("已設定地點：" + d + (label ? "（" + label + "）" : ""));
   logEvent("設定地點", d + (label ? "・" + label : ""));
@@ -1140,19 +1151,27 @@ function drawMap(){
     pts.push([c[0], c[1]]);
   });
   if(place && place.lat){
-    L.circleMarker([place.lat, place.lng], {
-      radius:9, color:"#7c4dff", weight:3, opacity:1, fillColor:"#7c4dff", fillOpacity:.35
+    L.marker([place.lat, place.lng], {
+      keyboard:false, zIndexOffset:1000,
+      icon: L.divIcon({className:"mepin", html:'<b></b>', iconSize:[30,30], iconAnchor:[15,15]})
     }).addTo(markerLayer);
     pts.push([place.lat, place.lng]);
   }
-  if(pts.length) map.fitBounds(L.latLngBounds(pts).pad(0.15), {maxZoom:15});
+  /* 只有篩選條件真的變了才重新框視野。
+     否則關掉明細、改個狀態都會把使用者調好的縮放拉掉。 */
+  var key = [state.q, state.dist, state.filter, place ? place.d : "", plotted].join("|");
+  if(pts.length && key !== lastFitKey){
+    lastFitKey = key;
+    if(place && place.lat) map.setView([place.lat, place.lng], 14);   // 有地點就以我為中心
+    else map.fitBounds(L.latLngBounds(pts).pad(0.15), {maxZoom:15});
+  }
   var missing = rows.length - plotted;
   mapTip(!plotted ? "這些單位還沒有座標，回清單等座標抓完再看地圖。"
         : missing ? "" : "");
   if(missing && plotted) toast(missing + " 家還沒有座標，暫時不會出現在地圖上");
   setTimeout(function(){ map.invalidateSize(); }, 60);
 }
-var mapPins = [];
+var mapPins = [], lastFitKey = "";
 var lastOpen = {id:0, at:0};
 function openFromMap(id){
   var now = Date.now();
@@ -1346,6 +1365,11 @@ railEl.addEventListener("click", function(e){
 });
 $("#viewtabs").addEventListener("click", function(e){
   var b = e.target.closest("[data-view]"); if(b) setView(b.getAttribute("data-view"));
+});
+$("#zme").addEventListener("click", function(){
+  if(!map) return;
+  if(!(place && place.lat)){ toast("先設定「我的地點」"); return; }
+  map.setView([place.lat, place.lng], 15);
 });
 $("#zin").addEventListener("click", function(){ if(map) map.zoomIn(); });
 $("#zout").addEventListener("click", function(){ if(map) map.zoomOut(); });
