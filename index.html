@@ -311,8 +311,13 @@ textarea{
 
 
 /* ---------- 同步 / 雲端 ---------- */
+.helpbtn{
+  margin-left:auto; width:32px; height:32px; border-radius:50%; flex:0 0 auto;
+  border:1px solid var(--line); background:var(--surface); color:var(--accent-ink);
+  font-size:16px; font-weight:700; line-height:1; box-shadow:var(--shadow);
+}
 .syncpill{
-  margin-left:auto; display:inline-flex; align-items:center; gap:6px;
+  margin-left:8px; display:inline-flex; align-items:center; gap:6px;
   border:1px solid var(--line); background:var(--surface); border-radius:999px;
   padding:4px 11px 4px 9px; font-size:12px; color:var(--ink-2); box-shadow:var(--shadow);
 }
@@ -485,6 +490,7 @@ textarea{
   <div class="top-inner">
     <div class="brandrow">
       <div class="brand">台中<em>長照接送</em>速查</div>
+      <button class="helpbtn" id="help" aria-label="使用說明">？</button>
       <button class="syncpill" id="syncBtn" data-s="local"><span class="dot"></span><span id="syncTxt">本機模式</span></button>
     </div>
     <div class="search">
@@ -606,7 +612,7 @@ var ST_MAP = {}; STATUS.forEach(function(s){ST_MAP[s.v]=s.t;});
 
 /* ============ 版本（要跟 Apps Script 的 APP_VERSION 對應） ============ */
 var APP_VERSION = 3;
-var BUILD = "0905h";        // 每次改版遞增，用來確認手機拿到的版本
+var BUILD = "0905i";        // 每次改版遞增，用來確認手機拿到的版本
 
 /* ============================================================
  * 雲端網址與密語「刻意」不寫在這裡。
@@ -1589,6 +1595,7 @@ listEl.addEventListener("click", function(e){
 $("#banner").addEventListener("click", function(e){ if(e.target.closest("[data-panel]")) pull(); });
 $("#tools").addEventListener("click", openPanel);
 $("#howto").addEventListener("click", function(){ showTour(0); });
+$("#help").addEventListener("click", function(){ showTour(0); });
 $("#syncBtn").addEventListener("click", openPanel);
 scrim.addEventListener("click", function(){
   /* iOS 在觸控後約 300ms 會補送一次 click，剛打開就收到的那一次要忽略，
@@ -1710,6 +1717,7 @@ if(ready()){
     if(!sessionStorage.getItem("ltc-open")){ sessionStorage.setItem("ltc-open", "1"); logEvent("開啟名單", ""); }
   }catch(e){}
   pull();
+  maybeTour();
 } else {
   setSync("err", "尚未設定");
   showGate();
